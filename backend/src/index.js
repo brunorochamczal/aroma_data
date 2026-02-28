@@ -5,6 +5,11 @@ import authRoutes from './routes/authRoutes.js';
 import clienteRoutes from './routes/clienteRoutes.js'; // NOVO
 import produtoRoutes from './routes/produtoRoutes.js'; // NOVO
 import { authenticate } from './middleware/auth.js'; // NOVO
+import vendaRoutes from './routes/vendaRoutes.js';
+import fornecedorRoutes from './routes/fornecedorRoutes.js';
+
+app.use('/api/vendas', authenticate, vendaRoutes);
+app.use('/api/fornecedores', authenticate, fornecedorRoutes);
 
 dotenv.config();
 
