@@ -1,0 +1,46 @@
+{
+  "name": "MovimentacaoEstoque",
+  "type": "object",
+  "properties": {
+    "produto_id": {
+      "type": "string",
+      "description": "ID do produto"
+    },
+    "produto_nome": {
+      "type": "string",
+      "description": "Nome do produto"
+    },
+    "tipo": {
+      "type": "string",
+      "enum": [
+        "ENTRADA",
+        "SAIDA"
+      ],
+      "description": "Tipo de movimenta\u00e7\u00e3o"
+    },
+    "quantidade": {
+      "type": "number",
+      "description": "Quantidade movimentada"
+    },
+    "motivo": {
+      "type": "string",
+      "enum": [
+        "VENDA",
+        "COMPRA",
+        "AJUSTE",
+        "CANCELAMENTO"
+      ],
+      "description": "Motivo da movimenta\u00e7\u00e3o"
+    },
+    "referencia_id": {
+      "type": "string",
+      "description": "ID da venda ou compra relacionada"
+    }
+  },
+  "required": [
+    "produto_id",
+    "tipo",
+    "quantidade",
+    "motivo"
+  ]
+}
