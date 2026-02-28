@@ -1,21 +1,29 @@
 import React, { useState, useEffect } from "react";
-import { base44 } from "@/api/base44Client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { AlertTriangle, X, Package, Bell } from "lucide-react";
+import { AlertTriangle, X, Bell } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { motion, AnimatePresence } from "framer-motion";
+import { aroma } from "@/api/aromaClient";
 
 export default function LowStockNotifications() {
   const queryClient = useQueryClient();
 
   const { data: notificacoes = [] } = useQuery({
     queryKey: ['notificacoes-estoque'],
-    queryFn: () => base44.entities.NotificacaoEstoque.filter({ visualizada: false }),
-    refetchInterval: 30000, // Refresh every 30 seconds
+    queryFn: async () => {
+      // Adapte para sua API real
+      const response = await aroma.vendas.listar(); // Temporário
+      return response.filter(n => !n.visualizada) || [];
+    },
+    refetchInterval: 30000,
   });
 
   const dismissMutation = useMutation({
-    mutationFn: (id) => base44.entities.NotificacaoEstoque.update(id, { visualizada: true }),
+    mutationFn: async (id) => {
+      // Implementar quando tiver endpoint de notificações
+      console.log('Dispensar notificação:', id);
+      return { success: true };
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['notificacoes-estoque'] });
     },
@@ -23,9 +31,8 @@ export default function LowStockNotifications() {
 
   const dismissAll = async () => {
     for (const notif of notificacoes) {
-      await base44.entities.NotificacaoEstoque.update(notif.id, { visualizada: true });
+      await dismissMutation.mutateAsync(notif.id);
     }
-    queryClient.invalidateQueries({ queryKey: ['notificacoes-estoque'] });
   };
 
   if (notificacoes.length === 0) return null;
@@ -47,4 +54,32 @@ export default function LowStockNotifications() {
                 <span className="text-sm font-semibold">Estoque Baixo</span>
               </div>
               <Button
- 
+                variant="ghost"
+                size="icon"
+                className="h-6 w-6 text-white hover:bg-white/20"
+                onClick={() => dismissMutation.mutate(notif.id)}
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+            <div className="p-4">
+              <p className="text-sm text-gray-600">
+                {notif.mensagem || 'Produto com estoque baixo'}
+              </p>
+            </div>
+          </motion.div>
+        ))}
+        {notificacoes.length > 3 && (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={dismissAll}
+            className="w-full bg-white/80 backdrop-blur-sm"
+          >
+            Dispensar todas ({notificacoes.length})
+          </Button>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
