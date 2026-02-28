@@ -1,0 +1,54 @@
+{
+  "name": "Produto",
+  "type": "object",
+  "properties": {
+    "nome": {
+      "type": "string",
+      "description": "Nome do perfume"
+    },
+    "marca": {
+      "type": "string",
+      "description": "Marca do perfume"
+    },
+    "volume": {
+      "type": "string",
+      "description": "Volume do frasco (ex: 100ml)"
+    },
+    "preco_custo": {
+      "type": "number",
+      "description": "Pre\u00e7o de custo"
+    },
+    "preco_venda": {
+      "type": "number",
+      "description": "Pre\u00e7o de venda"
+    },
+    "estoque_atual": {
+      "type": "number",
+      "default": 0,
+      "description": "Quantidade em estoque"
+    },
+    "estoque_minimo": {
+      "type": "number",
+      "default": 5,
+      "description": "Estoque m\u00ednimo para alerta"
+    },
+    "fornecedor_id": {
+      "type": "string",
+      "description": "ID do fornecedor"
+    },
+    "imagem_url": {
+      "type": "string",
+      "description": "URL da imagem do produto"
+    },
+    "ativo": {
+      "type": "boolean",
+      "default": true,
+      "description": "Status do produto"
+    }
+  },
+  "required": [
+    "nome",
+    "preco_custo",
+    "preco_venda"
+  ]
+}
