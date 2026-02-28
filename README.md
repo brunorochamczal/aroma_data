@@ -1,13 +1,10 @@
-**Welcome to your Aroma Data** 
+**Bem-vindo ao seu Aroma Data**
 
-**About**
+**Sobre**
+Este projeto contém tudo o que você precisa para executar seu aplicativo localmente.
 
-This project contains everything you need to run your app locally.
-
-**Prerequisites:** 
-
-1. Clone the repository using the project's Git URL 
-2. Navigate to the project directory
-3. Install dependencies: `npm install`
-4. Create an `.env.local` file and set the right environment variables
-
+**Pré-requisitos:**
+Clone o repositório usando a URL Git do projeto
+Navegue até o diretório do projeto
+Instale as dependências: npm install
+Crie um arquivo .env.local e defina as variáveis de ambiente corretas
