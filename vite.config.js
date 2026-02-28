@@ -19,6 +19,12 @@ export default defineConfig({
   },
   build: {
     outDir: 'dist',
-    sourcemap: false
+    sourcemap: false,
+    // Garantir que variáveis de ambiente sejam incluídas
+    rollupOptions: {
+      output: {
+        manualChunks: undefined
+      }
+    }
   }
 })
