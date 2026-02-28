@@ -1,7 +1,7 @@
 import { query } from '../config/database.js';
 
 export const Produto = {
-  // LISTAR todos
+  // LISTAR
   async findAll() {
     try {
       const result = await query(
@@ -9,12 +9,12 @@ export const Produto = {
       );
       return result.rows;
     } catch (error) {
-      console.error('Erro em Produto.findAll:', error);
-      return [];
+      console.error('❌ Erro em Produto.findAll:', error);
+      throw error;
     }
   },
 
-  // BUSCAR por ID
+  // BUSCAR POR ID
   async findById(id) {
     try {
       const result = await query(
@@ -23,8 +23,8 @@ export const Produto = {
       );
       return result.rows[0];
     } catch (error) {
-      console.error('Erro em Produto.findById:', error);
-      return null;
+      console.error('❌ Erro em Produto.findById:', error);
+      throw error;
     }
   },
 
@@ -46,7 +46,7 @@ export const Produto = {
       );
       return result.rows[0];
     } catch (error) {
-      console.error('Erro em Produto.create:', error);
+      console.error('❌ Erro em Produto.create:', error);
       throw error;
     }
   },
@@ -69,7 +69,7 @@ export const Produto = {
       );
       return result.rows[0];
     } catch (error) {
-      console.error('Erro em Produto.update:', error);
+      console.error('❌ Erro em Produto.update:', error);
       throw error;
     }
   },
@@ -83,25 +83,7 @@ export const Produto = {
       );
       return result.rows[0];
     } catch (error) {
-      console.error('Erro em Produto.delete:', error);
-      throw error;
-    }
-  },
-
-  // MÉTODO ESPECÍFICO DE PRODUTO
-  async updateStock(id, quantidade, operacao = 'add') {
-    try {
-      let sql;
-      if (operacao === 'add') {
-        sql = 'UPDATE produtos SET estoque_atual = estoque_atual + $1, updated_at = NOW() WHERE id = $2 AND ativo = true RETURNING *';
-      } else {
-        sql = 'UPDATE produtos SET estoque_atual = estoque_atual - $1, updated_at = NOW() WHERE id = $2 AND ativo = true AND estoque_atual >= $1 RETURNING *';
-      }
-      
-      const result = await query(sql, [quantidade, id]);
-      return result.rows[0];
-    } catch (error) {
-      console.error('Erro em Produto.updateStock:', error);
+      console.error('❌ Erro em Produto.delete:', error);
       throw error;
     }
   }
