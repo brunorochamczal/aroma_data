@@ -1,7 +1,7 @@
 **Bem-vindo ao seu Aroma Data**
 
 **Sobre**
-Este projeto contém tudo o que você precisa para executar seu aplicativo localmente.
+Sistema de gestão de vendas para vendedores autônomos de perfumes.
 
 **Pré-requisitos:**
 Clone o repositório usando a URL Git do projeto
