@@ -1,0 +1,34 @@
+{
+  "name": "Cliente",
+  "type": "object",
+  "properties": {
+    "nome": {
+      "type": "string",
+      "description": "Nome completo do cliente"
+    },
+    "cpf": {
+      "type": "string",
+      "description": "CPF do cliente"
+    },
+    "telefone": {
+      "type": "string",
+      "description": "Telefone de contato"
+    },
+    "email": {
+      "type": "string",
+      "description": "Email do cliente"
+    },
+    "endereco": {
+      "type": "string",
+      "description": "Endere\u00e7o completo"
+    },
+    "ativo": {
+      "type": "boolean",
+      "default": true,
+      "description": "Status do cliente"
+    }
+  },
+  "required": [
+    "nome"
+  ]
+}
