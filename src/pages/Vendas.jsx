@@ -1,11 +1,11 @@
 import React, { useState } from "react";
-import { base44 } from "@/api/base44Client";
+import { aroma } from "@/api/aromaClient";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { 
-  Plus, Search, ShoppingCart, Loader2, XCircle, 
-  Eye, Calendar, User, Receipt
+  Plus, Search, ShoppingCart, Loader2, 
+  Eye, Calendar, MoreVertical
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -17,6 +17,12 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import {
   Table,
   TableBody,
@@ -38,7 +44,10 @@ export default function Vendas() {
 
   const { data: vendas = [], isLoading } = useQuery({
     queryKey: ['vendas'],
-    queryFn: () => base44.entities.Venda.list('-created_date'),
+    queryFn: async () => {
+      const response = await aroma.vendas.listar();
+      return response.sort((a, b) => new Date(b.created_date) - new Date(a.created_date));
+    },
   });
 
   const cancelarMutation = useMutation({
@@ -46,13 +55,13 @@ export default function Vendas() {
       // Restaurar estoque
       if (venda.itens && !venda.cancelada) {
         for (const item of venda.itens) {
-          const produtos = await base44.entities.Produto.filter({ id: item.produto_id });
-          if (produtos.length > 0) {
-            const produto = produtos[0];
-            await base44.entities.Produto.update(produto.id, {
+          const produtos = await aroma.produtos.listar();
+          const produto = produtos.find(p => p.id === item.produto_id);
+          if (produto) {
+            await aroma.produtos.atualizar(produto.id, {
               estoque_atual: (produto.estoque_atual || 0) + item.quantidade
             });
-            await base44.entities.MovimentacaoEstoque.create({
+            await aroma.movimentacoes.criar({
               produto_id: produto.id,
               produto_nome: produto.nome,
               tipo: "ENTRADA",
@@ -63,13 +72,17 @@ export default function Vendas() {
           }
         }
       }
-      await base44.entities.Venda.update(venda.id, { cancelada: true });
+      await aroma.vendas.cancelar(venda.id);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['vendas'] });
       queryClient.invalidateQueries({ queryKey: ['produtos'] });
       toast.success("Venda cancelada com sucesso!");
       setSelectedVenda(null);
+    },
+    onError: (error) => {
+      toast.error("Erro ao cancelar venda");
+      console.error(error);
     },
   });
 
@@ -179,16 +192,31 @@ export default function Vendas() {
                       )}
                     </TableCell>
                     <TableCell className="text-right">
-                      <Button 
-                        variant="ghost" 
-                        size="icon"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setSelectedVenda(venda);
-                        }}
-                      >
-                        <Eye className="h-4 w-4" />
-                      </Button>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button 
+                            variant="ghost" 
+                            size="icon"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <MoreVertical className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem onClick={() => setSelectedVenda(venda)}>
+                            <Eye className="h-4 w-4 mr-2" />
+                            Ver detalhes
+                          </DropdownMenuItem>
+                          {!venda.cancelada && (
+                            <DropdownMenuItem 
+                              onClick={() => cancelarMutation.mutate(venda)}
+                              className="text-red-600"
+                            >
+                              Cancelar venda
+                            </DropdownMenuItem>
+                          )}
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </TableCell>
                   </TableRow>
                 ))}
