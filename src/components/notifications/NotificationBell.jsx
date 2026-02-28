@@ -1,5 +1,4 @@
 import React from "react";
-import { base44 } from "@/api/base44Client";
 import { useQuery } from "@tanstack/react-query";
 import { Bell } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -10,12 +9,17 @@ import {
 } from "@/components/ui/popover";
 import { Badge } from "@/components/ui/badge";
 import { Link } from "react-router-dom";
-import { createPageUrl } from "@/utils";
+import { createPageUrl } from "@/lib/utils";
+import { aroma } from "@/api/aromaClient";
 
 export default function NotificationBell() {
   const { data: notificacoes = [] } = useQuery({
     queryKey: ['notificacoes-estoque'],
-    queryFn: () => base44.entities.NotificacaoEstoque.filter({ visualizada: false }),
+    queryFn: async () => {
+      // Adapte para sua API real
+      const response = await aroma.vendas.listar(); // Temporário
+      return response.filter(n => !n.visualizada) || [];
+    },
     refetchInterval: 30000,
   });
 
@@ -47,4 +51,25 @@ export default function NotificationBell() {
               Nenhuma notificação pendente
             </p>
           ) : (
- 
+            <div className="space-y-2 max-h-[300px] overflow-y-auto">
+              {notificacoes.map((notif) => (
+                <Link
+                  key={notif.id}
+                  to={createPageUrl("Produtos")}
+                  className="block p-3 hover:bg-gray-50 rounded-lg transition-colors"
+                >
+                  <p className="text-sm font-medium text-gray-900">
+                    {notif.produto_nome || 'Produto'}
+                  </p>
+                  <p className="text-xs text-gray-500 mt-1">
+                    Estoque: {notif.estoque_atual} unidades
+                  </p>
+                </Link>
+              ))}
+            </div>
+          )}
+        </div>
+      </PopoverContent>
+    </Popover>
+  );
+}
