@@ -1,23 +1,19 @@
 services:
-  - type: static
-    name: aroma-data-frontend
-    runtime: static
+  - type: web
+    name: aroma-data-system
+    runtime: node
     repo: https://github.com/brunorochamczal/aroma_data
     branch: main
     buildCommand: npm install && npm run build
-    staticPublishPath: ./dist
+    startCommand: npm run start
     envVars:
-      - key: VITE_APP_ID
-        sync: false  # Você define no dashboard do Render
-      - key: VITE_TOKEN
-        sync: false
+      - key: NODE_VERSION
+        value: 18
+      - key: VITE_AROMA_APP_ID
+        value: SEU_APP_ID_AQUI
       - key: VITE_AROMA_URL
-        value: https://api.aroma.com  # URL do Aroma
-    headers:
-      - path: /*
-        name: X-Frame-Options
-        value: DENY
-    routes:
-      - type: rewrite
-        source: /*
-        destination: /index.html
+        value: https://api.aroma.com
+      - key: VITE_AROMA_FUNCTIONS_VERSION
+        value: latest
+    healthCheckPath: /
+    autoDeploy: true
