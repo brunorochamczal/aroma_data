@@ -88,7 +88,30 @@ export const aroma = {
       const params = new URLSearchParams(filtros).toString();
       return apiRequest(`/clientes${params ? `?${params}` : ''}`);
     },
-    // ... (mantenha o resto igual)
+
+    buscar: async (id) => {
+      return apiRequest(`/clientes/${id}`);
+    },
+
+    criar: async (dados) => {  // <-- ADICIONADO
+      return apiRequest('/clientes', {
+        method: 'POST',
+        body: JSON.stringify(dados)
+      });
+    },
+
+    atualizar: async (id, dados) => {  // <-- ADICIONADO
+      return apiRequest(`/clientes/${id}`, {
+        method: 'PUT',
+        body: JSON.stringify(dados)
+      });
+    },
+
+    desativar: async (id) => {  // <-- ADICIONADO
+      return apiRequest(`/clientes/${id}`, {
+        method: 'DELETE'
+      });
+    }
   },
 
   // ==================== PRODUTOS ====================
@@ -97,7 +120,37 @@ export const aroma = {
       const params = new URLSearchParams(filtros).toString();
       return apiRequest(`/produtos${params ? `?${params}` : ''}`);
     },
-    // ... (mantenha o resto igual)
+
+    buscar: async (id) => {
+      return apiRequest(`/produtos/${id}`);
+    },
+
+    criar: async (dados) => {  // <-- ADICIONADO
+      return apiRequest('/produtos', {
+        method: 'POST',
+        body: JSON.stringify(dados)
+      });
+    },
+
+    atualizar: async (id, dados) => {  // <-- ADICIONADO
+      return apiRequest(`/produtos/${id}`, {
+        method: 'PUT',
+        body: JSON.stringify(dados)
+      });
+    },
+
+    desativar: async (id) => {  // <-- ADICIONADO
+      return apiRequest(`/produtos/${id}`, {
+        method: 'DELETE'
+      });
+    },
+
+    atualizarEstoque: async (id, quantidade) => {  // <-- ADICIONADO
+      return apiRequest(`/produtos/${id}/estoque`, {
+        method: 'POST',
+        body: JSON.stringify({ quantidade })
+      });
+    }
   },
 
   // ==================== FORNECEDORES ====================
@@ -106,7 +159,30 @@ export const aroma = {
       const params = new URLSearchParams(filtros).toString();
       return apiRequest(`/fornecedores${params ? `?${params}` : ''}`);
     },
-    // ... (mantenha o resto igual)
+
+    buscar: async (id) => {
+      return apiRequest(`/fornecedores/${id}`);
+    },
+
+    criar: async (dados) => {  // <-- ADICIONADO
+      return apiRequest('/fornecedores', {
+        method: 'POST',
+        body: JSON.stringify(dados)
+      });
+    },
+
+    atualizar: async (id, dados) => {  // <-- ADICIONADO
+      return apiRequest(`/fornecedores/${id}`, {
+        method: 'PUT',
+        body: JSON.stringify(dados)
+      });
+    },
+
+    desativar: async (id) => {  // <-- ADICIONADO
+      return apiRequest(`/fornecedores/${id}`, {
+        method: 'DELETE'
+      });
+    }
   },
 
   // ==================== VENDAS ====================
@@ -115,7 +191,23 @@ export const aroma = {
       const params = new URLSearchParams(filtros).toString();
       return apiRequest(`/vendas${params ? `?${params}` : ''}`);
     },
-    // ... (mantenha o resto igual)
+
+    buscar: async (id) => {
+      return apiRequest(`/vendas/${id}`);
+    },
+
+    criar: async (dados) => {  // <-- ADICIONADO
+      return apiRequest('/vendas', {
+        method: 'POST',
+        body: JSON.stringify(dados)
+      });
+    },
+
+    cancelar: async (id) => {  // <-- ADICIONADO
+      return apiRequest(`/vendas/${id}/cancelar`, {
+        method: 'POST'
+      });
+    }
   },
 
   // ==================== MOVIMENTAÇÕES ====================
@@ -124,6 +216,7 @@ export const aroma = {
       const params = new URLSearchParams(filtros).toString();
       return apiRequest(`/movimentacoes${params ? `?${params}` : ''}`);
     },
+    
     criar: async (dados) => {
       return apiRequest('/movimentacoes', {
         method: 'POST',
@@ -137,6 +230,7 @@ export const aroma = {
     listar: async () => {
       return apiRequest('/notificacoes');
     },
+    
     marcarLida: async (id) => {
       return apiRequest(`/notificacoes/${id}/ler`, {
         method: 'POST'
