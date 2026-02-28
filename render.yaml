@@ -1,14 +1,16 @@
+# render.yaml
 services:
-  - type: web
-    name: base44-app
+  # Frontend - Static Site
+  - type: static
+    name: sistema-frontend
     runtime: static
     repo: https://github.com/brunorochamczal/aroma_data
     branch: main
     buildCommand: npm install && npm run build
     staticPublishPath: ./dist
     envVars:
-      - key: NODE_VERSION
-        value: 18
+      - key: VITE_API_URL
+        value: https://sistema-backend.onrender.com/api
     headers:
       - path: /*
         name: X-Frame-Options
