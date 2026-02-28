@@ -1,7 +1,7 @@
 import React, { useState } from "react";
-import { base44 } from "@/api/base44Client";
+import { aroma } from "@/api/aromaClient";
 import { useQuery } from "@tanstack/react-query";
-import { format, startOfMonth, endOfMonth, parseISO, subMonths } from "date-fns";
+import { format, startOfMonth, endOfMonth, subMonths } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { 
   FileText, Download, Calendar, Users, Package, 
@@ -32,22 +32,31 @@ export default function Relatorios() {
 
   const { data: vendas = [], isLoading: loadingVendas } = useQuery({
     queryKey: ['vendas-relatorio'],
-    queryFn: () => base44.entities.Venda.list('-created_date', 1000),
+    queryFn: async () => {
+      const response = await aroma.vendas.listar();
+      return response.slice(0, 1000); // Limitar a 1000 registros
+    },
   });
 
   const { data: clientes = [], isLoading: loadingClientes } = useQuery({
     queryKey: ['clientes-relatorio'],
-    queryFn: () => base44.entities.Cliente.list(),
+    queryFn: async () => {
+      return await aroma.clientes.listar();
+    },
   });
 
   const { data: produtos = [], isLoading: loadingProdutos } = useQuery({
     queryKey: ['produtos-relatorio'],
-    queryFn: () => base44.entities.Produto.list(),
+    queryFn: async () => {
+      return await aroma.produtos.listar();
+    },
   });
 
   const { data: fornecedores = [], isLoading: loadingFornecedores } = useQuery({
     queryKey: ['fornecedores-relatorio'],
-    queryFn: () => base44.entities.Fornecedor.list(),
+    queryFn: async () => {
+      return await aroma.fornecedores.listar();
+    },
   });
 
   const getDateRange = () => {
