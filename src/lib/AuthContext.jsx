@@ -10,13 +10,16 @@ export const AuthProvider = ({ children }) => {
   const [authError, setAuthError] = useState(null);
 
   useEffect(() => {
+    console.log('🔄 AuthProvider: Verificando autenticação...');
     checkAuth();
   }, []);
 
   const checkAuth = async () => {
     const token = localStorage.getItem('token');
+    console.log('🔍 checkAuth: Token existe?', !!token);
     
     if (!token) {
+      console.log('🔍 checkAuth: Sem token, usuário não autenticado');
       setIsAuthenticated(false);
       setIsLoading(false);
       return;
@@ -24,11 +27,14 @@ export const AuthProvider = ({ children }) => {
 
     try {
       setIsLoading(true);
+      console.log('🔍 checkAuth: Validando token com /auth/me...');
       const userData = await aroma.auth.me();
+      console.log('🔍 checkAuth: Resposta de /auth/me:', userData);
       setUser(userData);
       setIsAuthenticated(true);
+      console.log('🔍 checkAuth: Usuário autenticado com sucesso!');
     } catch (error) {
-      console.error('Auth check failed:', error);
+      console.error('🔍 checkAuth: Erro ao validar token:', error);
       localStorage.removeItem('token');
       setIsAuthenticated(false);
     } finally {
@@ -37,42 +43,58 @@ export const AuthProvider = ({ children }) => {
   };
 
   const login = async (email, password) => {
+    console.log('🔑 login: Iniciando login com email:', email);
     try {
       setIsLoading(true);
       setAuthError(null);
       
+      console.log('🔑 login: Chamando aroma.auth.login...');
       const response = await aroma.auth.login(email, password);
+      console.log('🔑 login: Resposta da API:', response);
       
       if (response.accessToken) {
+        console.log('🔑 login: AccessToken recebido, salvando...');
         localStorage.setItem('token', response.accessToken);
         setUser(response.user);
         setIsAuthenticated(true);
+        console.log('🔑 login: Login bem-sucedido! isAuthenticated = true');
+        return { success: true };
+      } else {
+        console.log('🔑 login: Resposta sem accessToken:', response);
+        return { success: false, error: 'Resposta inválida do servidor' };
       }
-      
-      return { success: true };
     } catch (error) {
+      console.error('🔑 login: Erro capturado:', error);
       setAuthError(error.message || 'Erro ao fazer login');
       return { success: false, error: error.message };
     } finally {
       setIsLoading(false);
+      console.log('🔑 login: Finalizado, loading = false');
     }
   };
 
   const register = async (userData) => {
+    console.log('📝 register: Iniciando registro com:', userData.email);
     try {
       setIsLoading(true);
       setAuthError(null);
       
       const response = await aroma.auth.register(userData);
+      console.log('📝 register: Resposta da API:', response);
       
       if (response.accessToken) {
+        console.log('📝 register: AccessToken recebido, salvando...');
         localStorage.setItem('token', response.accessToken);
         setUser(response.user);
         setIsAuthenticated(true);
+        console.log('📝 register: Registro e login bem-sucedidos!');
+        return { success: true };
+      } else {
+        console.log('📝 register: Resposta sem accessToken');
+        return { success: false, error: 'Resposta inválida do servidor' };
       }
-      
-      return { success: true };
     } catch (error) {
+      console.error('📝 register: Erro capturado:', error);
       setAuthError(error.message || 'Erro ao registrar');
       return { success: false, error: error.message };
     } finally {
@@ -81,22 +103,27 @@ export const AuthProvider = ({ children }) => {
   };
 
   const logout = () => {
+    console.log('🚪 logout: Fazendo logout');
     localStorage.removeItem('token');
     setUser(null);
     setIsAuthenticated(false);
     window.location.href = '/login';
   };
 
+  const value = {
+    user,
+    isAuthenticated,
+    isLoading,
+    authError,
+    login,
+    register,
+    logout
+  };
+
+  console.log('📊 AuthProvider: Estado atual', { isAuthenticated, isLoading, user: user?.email });
+
   return (
-    <AuthContext.Provider value={{
-      user,
-      isAuthenticated,
-      isLoading,
-      authError,
-      login,
-      register,
-      logout
-    }}>
+    <AuthContext.Provider value={value}>
       {children}
     </AuthContext.Provider>
   );
