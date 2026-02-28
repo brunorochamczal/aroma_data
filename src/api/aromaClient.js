@@ -2,7 +2,7 @@
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
 
-// Função auxiliar para requisições com autenticação
+// Função auxiliar para TODAS as requisições (INCLUINDO LOGIN)
 const apiRequest = async (endpoint, options = {}) => {
   const token = localStorage.getItem('token');
   
@@ -15,14 +15,23 @@ const apiRequest = async (endpoint, options = {}) => {
     headers.Authorization = `Bearer ${token}`;
   }
 
+  console.log(`📤 ${options.method || 'GET'} ${API_URL}${endpoint}`, { headers, body: options.body });
+
   const response = await fetch(`${API_URL}${endpoint}`, {
     ...options,
     headers,
   });
 
   const data = await response.json();
+  console.log('📥 Resposta:', { status: response.status, data });
 
   if (!response.ok) {
+    // Se for 401 (não autorizado), limpa token e redireciona
+    if (response.status === 401) {
+      console.log('🔒 Token inválido ou expirado, redirecionando para login');
+      localStorage.removeItem('token');
+      window.location.href = '/login';
+    }
     throw data;
   }
 
@@ -32,30 +41,36 @@ const apiRequest = async (endpoint, options = {}) => {
 export const aroma = {
   // ==================== AUTENTICAÇÃO ====================
   auth: {
-  login: async (email, password) => {
-    console.log('📤 Enviando login para:', `${API_URL}/auth/login`);
-    const response = await fetch(`${API_URL}/auth/login`, {
-      method: 'POST', // <--- TEM QUE SER POST, NÃO GET!
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password })
-    });
-    
-    const data = await response.json();
-    console.log('📥 Resposta do login:', data);
-    
-    if (!response.ok) {
-      throw data;
-    }
-    
-    return data;
-  },
-},
+    // LOGIN CORRIGIDO - AGORA USA apiRequest
+    login: async (email, password) => {
+      console.log('🔐 Tentando login...');
+      const data = await apiRequest('/auth/login', {
+        method: 'POST',
+        body: JSON.stringify({ email, password })
+      });
+      
+      // Salva o token quando receber
+      if (data.accessToken) {
+        console.log('✅ Token recebido, salvando...');
+        localStorage.setItem('token', data.accessToken);
+      }
+      
+      return data;
+    },
 
     register: async (userData) => {
-      return apiRequest('/auth/register', {
+      console.log('📝 Tentando registro...');
+      const data = await apiRequest('/auth/register', {
         method: 'POST',
         body: JSON.stringify(userData)
       });
+      
+      if (data.accessToken) {
+        console.log('✅ Token recebido, salvando...');
+        localStorage.setItem('token', data.accessToken);
+      }
+      
+      return data;
     },
 
     me: async () => {
@@ -63,6 +78,7 @@ export const aroma = {
     },
 
     logout: () => {
+      console.log('🚪 Fazendo logout');
       localStorage.removeItem('token');
       window.location.href = '/login';
     }
