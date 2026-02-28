@@ -1,52 +1,32 @@
-import express from 'express';
+// backend/src/middleware/auth.js
+import jwt from 'jsonwebtoken';
 
-const router = express.Router();
-
-// ===== ROTA DE TESTE =====
-router.get('/teste', (req, res) => {
-  console.log('✅ Rota /api/auth/teste foi chamada!');
-  res.json({ 
-    success: true,
-    message: 'Rota de teste do auth funcionando!',
-    timestamp: new Date().toISOString()
-  });
-});
-
-// ===== LOGIN =====
-router.post('/login', (req, res) => {
-  console.log('🔐 Rota /api/auth/login foi chamada!');
-  console.log('📦 Dados recebidos:', req.body);
-  
-  // Por enquanto, retorna sucesso para teste
-  res.json({ 
-    success: true,
-    message: 'Login endpoint funcionando',
-    accessToken: 'fake-token-para-teste',
-    user: {
-      id: 1,
-      email: req.body.email,
-      name: 'Usuário Teste'
+export const authenticate = async (req, res, next) => {
+  try {
+    const authHeader = req.headers.authorization;
+    if (!authHeader) {
+      return res.status(401).json({ error: 'Authentication required' });
     }
-  });
-});
 
-// ===== REGISTER =====
-router.post('/register', (req, res) => {
-  console.log('📝 Rota /api/auth/register foi chamada!');
-  res.json({ 
-    success: true,
-    message: 'Register endpoint funcionando' 
-  });
-});
+    const token = authHeader.replace('Bearer ', '');
+    console.log('🔑 Token recebido:', token.substring(0, 20) + '...');
 
-// ===== ME =====
-router.get('/me', (req, res) => {
-  console.log('👤 Rota /api/auth/me foi chamada!');
-  res.json({ 
-    id: 1,
-    email: 'teste@email.com',
-    name: 'Usuário Teste'
-  });
-});
+    // Verifica o token
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    console.log('✅ Token válido para usuário:', decoded.userId);
 
-export default router;
+    req.user = { id: decoded.userId };
+    next();
+  } catch (error) {
+    console.error('❌ Erro na autenticação:', error.message);
+    
+    if (error.name === 'JsonWebTokenError') {
+      return res.status(401).json({ error: 'Invalid token' });
+    }
+    if (error.name === 'TokenExpiredError') {
+      return res.status(401).json({ error: 'Token expired' });
+    }
+    
+    res.status(500).json({ error: 'Authentication error' });
+  }
+};
