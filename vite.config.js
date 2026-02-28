@@ -2,7 +2,9 @@ import react from '@vitejs/plugin-react'
 import { defineConfig } from 'vite'
 import path from 'path'
 
+// https://vite.dev/config/
 export default defineConfig({
+  logLevel: 'error',
   plugins: [react()],
   resolve: {
     alias: {
@@ -11,20 +13,20 @@ export default defineConfig({
   },
   server: {
     port: 3000,
-    host: true
+    host: true,
+    allowedHosts: [
+      'aroma-data.onrender.com',
+      '.onrender.com', // Permite todos os subdomínios do Render
+      'localhost'
+    ]
   },
   preview: {
     port: 3000,
-    host: true
-  },
-  build: {
-    outDir: 'dist',
-    sourcemap: false,
-    // Garantir que variáveis de ambiente sejam incluídas
-    rollupOptions: {
-      output: {
-        manualChunks: undefined
-      }
-    }
+    host: true,
+    allowedHosts: [
+      'aroma-data.onrender.com',
+      '.onrender.com',
+      'localhost'
+    ]
   }
 })
