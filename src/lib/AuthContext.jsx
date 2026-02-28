@@ -1,4 +1,3 @@
-// Versão atualizada do AuthContext.jsx usando aromaClient
 import React, { createContext, useState, useContext, useEffect } from 'react';
 import { aroma } from '@/api/aromaClient';
 
@@ -15,14 +14,22 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   const checkAuth = async () => {
+    const token = localStorage.getItem('token');
+    
+    if (!token) {
+      setIsAuthenticated(false);
+      setIsLoading(false);
+      return;
+    }
+
     try {
       setIsLoading(true);
-      // Usando aromaClient em vez de fetch direto
       const userData = await aroma.auth.me();
       setUser(userData);
       setIsAuthenticated(true);
     } catch (error) {
       console.error('Auth check failed:', error);
+      localStorage.removeItem('token');
       setIsAuthenticated(false);
     } finally {
       setIsLoading(false);
@@ -34,29 +41,50 @@ export const AuthProvider = ({ children }) => {
       setIsLoading(true);
       setAuthError(null);
       
-      // Você precisará implementar este método no aromaClient
       const response = await aroma.auth.login(email, password);
       
-      if (response.token) {
-        localStorage.setItem('token', response.token);
+      if (response.accessToken) {
+        localStorage.setItem('token', response.accessToken);
         setUser(response.user);
         setIsAuthenticated(true);
       }
       
-      return response;
+      return { success: true };
     } catch (error) {
-      setAuthError(error.message);
-      throw error;
+      setAuthError(error.message || 'Erro ao fazer login');
+      return { success: false, error: error.message };
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const register = async (userData) => {
+    try {
+      setIsLoading(true);
+      setAuthError(null);
+      
+      const response = await aroma.auth.register(userData);
+      
+      if (response.accessToken) {
+        localStorage.setItem('token', response.accessToken);
+        setUser(response.user);
+        setIsAuthenticated(true);
+      }
+      
+      return { success: true };
+    } catch (error) {
+      setAuthError(error.message || 'Erro ao registrar');
+      return { success: false, error: error.message };
     } finally {
       setIsLoading(false);
     }
   };
 
   const logout = () => {
-    aroma.auth.logout();
+    localStorage.removeItem('token');
     setUser(null);
     setIsAuthenticated(false);
-    localStorage.removeItem('token');
+    window.location.href = '/login';
   };
 
   return (
@@ -66,6 +94,7 @@ export const AuthProvider = ({ children }) => {
       isLoading,
       authError,
       login,
+      register,
       logout
     }}>
       {children}
