@@ -1,0 +1,64 @@
+{
+  "name": "Venda",
+  "type": "object",
+  "properties": {
+    "cliente_id": {
+      "type": "string",
+      "description": "ID do cliente"
+    },
+    "cliente_nome": {
+      "type": "string",
+      "description": "Nome do cliente"
+    },
+    "itens": {
+      "type": "array",
+      "description": "Itens da venda",
+      "items": {
+        "type": "object",
+        "properties": {
+          "produto_id": {
+            "type": "string"
+          },
+          "produto_nome": {
+            "type": "string"
+          },
+          "quantidade": {
+            "type": "number"
+          },
+          "preco_unitario": {
+            "type": "number"
+          },
+          "subtotal": {
+            "type": "number"
+          }
+        }
+      }
+    },
+    "valor_total": {
+      "type": "number",
+      "description": "Valor total da venda"
+    },
+    "desconto": {
+      "type": "number",
+      "default": 0,
+      "description": "Desconto aplicado"
+    },
+    "valor_final": {
+      "type": "number",
+      "description": "Valor final ap\u00f3s desconto"
+    },
+    "observacoes": {
+      "type": "string",
+      "description": "Observa\u00e7\u00f5es da venda"
+    },
+    "cancelada": {
+      "type": "boolean",
+      "default": false,
+      "description": "Se a venda foi cancelada"
+    }
+  },
+  "required": [
+    "itens",
+    "valor_total"
+  ]
+}
