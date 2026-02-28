@@ -1,13 +1,15 @@
+// src/api/aromaCliente.js
 import { createClient } from '@aroma/sdk';
+import { appParams } from '@/lib/app-params';
 
-const appId = import.meta.env.VITE_APP_ID;
-const token = import.meta.env.VITE_TOKEN;
-const appAromaUrl = import.meta.env.VITE_AROMA_URL;
+const { appId, token, functionsVersion, appAromaUrl } = appParams;
 
+// Create a client with authentication required
 export const aroma = createClient({
   appId,
   token,
+  functionsVersion,
   serverUrl: '',
   requiresAuth: false,
-  appAromaUrl
+  appAromaUrl: appAromaUrl || 'https://api.aroma.com'
 });
