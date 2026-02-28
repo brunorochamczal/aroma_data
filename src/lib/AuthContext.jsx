@@ -1,144 +1,213 @@
 import React, { createContext, useState, useContext, useEffect } from 'react';
-import { base44 } from '@/api/base44Client';
-import { appParams } from '@/lib/app-params';
-import { createAxiosClient } from '@base44/sdk/dist/utils/axios-client';
 
 const AuthContext = createContext();
+
+// Configuração da API - será substituída pela URL real quando criar o backend
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [isLoadingAuth, setIsLoadingAuth] = useState(true);
-  const [isLoadingPublicSettings, setIsLoadingPublicSettings] = useState(true);
+  const [isLoading, setIsLoading] = useState(true);
   const [authError, setAuthError] = useState(null);
-  const [appPublicSettings, setAppPublicSettings] = useState(null); // Contains only { id, public_settings }
 
+  // Verificar se há token salvo ao iniciar
   useEffect(() => {
-    checkAppState();
+    const token = localStorage.getItem('token');
+    if (token) {
+      validateToken(token);
+    } else {
+      setIsLoading(false);
+    }
   }, []);
 
-  const checkAppState = async () => {
+  // Validar token com o backend
+  const validateToken = async (token) => {
     try {
-      setIsLoadingPublicSettings(true);
-      setAuthError(null);
-      
-      // First, check app public settings (with token if available)
-      // This will tell us if auth is required, user not registered, etc.
-      const appClient = createAxiosClient({
-        baseURL: `/api/apps/public`,
+      setIsLoading(true);
+      const response = await fetch(`${API_URL}/auth/validate`, {
         headers: {
-          'X-App-Id': appParams.appId
-        },
-        token: appParams.token, // Include token if available
-        interceptResponses: true
-      });
-      
-      try {
-        const publicSettings = await appClient.get(`/prod/public-settings/by-id/${appParams.appId}`);
-        setAppPublicSettings(publicSettings);
-        
-        // If we got the app public settings successfully, check if user is authenticated
-        if (appParams.token) {
-          await checkUserAuth();
-        } else {
-          setIsLoadingAuth(false);
-          setIsAuthenticated(false);
+          'Authorization': `Bearer ${token}`
         }
-        setIsLoadingPublicSettings(false);
-      } catch (appError) {
-        console.error('App state check failed:', appError);
-        
-        // Handle app-level errors
-        if (appError.status === 403 && appError.data?.extra_data?.reason) {
-          const reason = appError.data.extra_data.reason;
-          if (reason === 'auth_required') {
-            setAuthError({
-              type: 'auth_required',
-              message: 'Authentication required'
-            });
-          } else if (reason === 'user_not_registered') {
-            setAuthError({
-              type: 'user_not_registered',
-              message: 'User not registered for this app'
-            });
-          } else {
-            setAuthError({
-              type: reason,
-              message: appError.message
-            });
-          }
-        } else {
-          setAuthError({
-            type: 'unknown',
-            message: appError.message || 'Failed to load app'
-          });
-        }
-        setIsLoadingPublicSettings(false);
-        setIsLoadingAuth(false);
-      }
-    } catch (error) {
-      console.error('Unexpected error:', error);
-      setAuthError({
-        type: 'unknown',
-        message: error.message || 'An unexpected error occurred'
       });
-      setIsLoadingPublicSettings(false);
-      setIsLoadingAuth(false);
-    }
-  };
 
-  const checkUserAuth = async () => {
-    try {
-      // Now check if the user is authenticated
-      setIsLoadingAuth(true);
-      const currentUser = await base44.auth.me();
-      setUser(currentUser);
-      setIsAuthenticated(true);
-      setIsLoadingAuth(false);
-    } catch (error) {
-      console.error('User auth check failed:', error);
-      setIsLoadingAuth(false);
-      setIsAuthenticated(false);
-      
-      // If user auth fails, it might be an expired token
-      if (error.status === 401 || error.status === 403) {
+      if (response.ok) {
+        const userData = await response.json();
+        setUser(userData);
+        setIsAuthenticated(true);
+      } else {
+        // Token inválido ou expirado
+        localStorage.removeItem('token');
         setAuthError({
-          type: 'auth_required',
-          message: 'Authentication required'
+          type: 'invalid_token',
+          message: 'Sessão expirada. Faça login novamente.'
         });
       }
+    } catch (error) {
+      console.error('Erro ao validar token:', error);
+      setAuthError({
+        type: 'connection_error',
+        message: 'Erro de conexão com o servidor'
+      });
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  const logout = (shouldRedirect = true) => {
+  // Função de login
+  const login = async (email, password) => {
+    try {
+      setIsLoading(true);
+      setAuthError(null);
+
+      const response = await fetch(`${API_URL}/auth/login`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ email, password })
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw {
+          status: response.status,
+          message: data.message || 'Erro ao fazer login'
+        };
+      }
+
+      // Salvar token e dados do usuário
+      localStorage.setItem('token', data.token);
+      setUser(data.user);
+      setIsAuthenticated(true);
+
+      return { success: true, user: data.user };
+    } catch (error) {
+      console.error('Login error:', error);
+      setAuthError({
+        type: error.status === 401 ? 'invalid_credentials' : 'login_error',
+        message: error.message || 'Erro ao fazer login'
+      });
+      return { success: false, error: error.message };
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Função de registro
+  const register = async (userData) => {
+    try {
+      setIsLoading(true);
+      setAuthError(null);
+
+      const response = await fetch(`${API_URL}/auth/register`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(userData)
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw {
+          status: response.status,
+          message: data.message || 'Erro ao registrar'
+        };
+      }
+
+      // Se o registro retornar token automaticamente
+      if (data.token) {
+        localStorage.setItem('token', data.token);
+        setUser(data.user);
+        setIsAuthenticated(true);
+      }
+
+      return { success: true, user: data.user };
+    } catch (error) {
+      console.error('Register error:', error);
+      setAuthError({
+        type: 'register_error',
+        message: error.message || 'Erro ao registrar'
+      });
+      return { success: false, error: error.message };
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Função de logout
+  const logout = async (shouldRedirect = false) => {
+    const token = localStorage.getItem('token');
+    
+    if (token) {
+      try {
+        // Notificar backend sobre logout (opcional)
+        await fetch(`${API_URL}/auth/logout`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+      } catch (error) {
+        console.error('Logout backend error:', error);
+      }
+    }
+
+    // Limpar dados locais
+    localStorage.removeItem('token');
     setUser(null);
     setIsAuthenticated(false);
-    
+
+    // Redirecionar para login se necessário
     if (shouldRedirect) {
-      // Use the SDK's logout method which handles token cleanup and redirect
-      base44.auth.logout(window.location.href);
-    } else {
-      // Just remove the token without redirect
-      base44.auth.logout();
+      window.location.href = '/login';
     }
   };
 
+  // Função para redirecionar para login
   const navigateToLogin = () => {
-    // Use the SDK's redirectToLogin method
-    base44.auth.redirectToLogin(window.location.href);
+    window.location.href = '/login';
+  };
+
+  // Função para obter perfil do usuário atual
+  const getProfile = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) throw new Error('Não autenticado');
+
+      const response = await fetch(`${API_URL}/auth/profile`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error('Erro ao buscar perfil');
+      }
+
+      const userData = await response.json();
+      setUser(userData);
+      return userData;
+    } catch (error) {
+      console.error('Get profile error:', error);
+      throw error;
+    }
   };
 
   return (
-    <AuthContext.Provider value={{ 
-      user, 
-      isAuthenticated, 
-      isLoadingAuth,
-      isLoadingPublicSettings,
+    <AuthContext.Provider value={{
+      user,
+      isAuthenticated,
+      isLoading,
       authError,
-      appPublicSettings,
+      login,
+      register,
       logout,
       navigateToLogin,
-      checkAppState
+      getProfile
     }}>
       {children}
     </AuthContext.Provider>
