@@ -32,12 +32,24 @@ const apiRequest = async (endpoint, options = {}) => {
 export const aroma = {
   // ==================== AUTENTICAÇÃO ====================
   auth: {
-    login: async (email, password) => {
-      return apiRequest('/auth/login', {
-        method: 'POST',
-        body: JSON.stringify({ email, password })
-      });
-    },
+  login: async (email, password) => {
+    console.log('📤 Enviando login para:', `${API_URL}/auth/login`);
+    const response = await fetch(`${API_URL}/auth/login`, {
+      method: 'POST', // <--- TEM QUE SER POST, NÃO GET!
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password })
+    });
+    
+    const data = await response.json();
+    console.log('📥 Resposta do login:', data);
+    
+    if (!response.ok) {
+      throw data;
+    }
+    
+    return data;
+  },
+},
 
     register: async (userData) => {
       return apiRequest('/auth/register', {
