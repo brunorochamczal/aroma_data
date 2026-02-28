@@ -39,8 +39,12 @@ export default function Layout({ children, currentPageName }) {
 
   useEffect(() => {
     const loadUser = async () => {
-      const userData = await base44.auth.me();
-      setUser(userData);
+      try {
+        const userData = await base44.auth.me();
+        setUser(userData);
+      } catch (error) {
+        console.error("Erro ao carregar usuário:", error);
+      }
     };
     loadUser();
   }, []);
@@ -85,4 +89,26 @@ export default function Layout({ children, currentPageName }) {
                 </div>
                 <ChevronDown className="h-4 w-4 text-gray-500" />
               </Button>
- 
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-48">
+              <DropdownMenuItem asChild>
+                <Link to={createPageUrl("Profile")} className="cursor-pointer">
+                  Perfil
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem asChild>
+                <Link to={createPageUrl("Configuracoes")} className="cursor-pointer">
+                  Configurações
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={handleLogout} className="text-red-600 cursor-pointer">
+                <LogOut className="mr-2 h-4 w-4" />
+                Sair
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+      </div>
+    </div>
+  );
+}
