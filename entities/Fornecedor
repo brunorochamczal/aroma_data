@@ -1,0 +1,34 @@
+{
+  "name": "Fornecedor",
+  "type": "object",
+  "properties": {
+    "nome": {
+      "type": "string",
+      "description": "Nome do fornecedor"
+    },
+    "cnpj": {
+      "type": "string",
+      "description": "CNPJ do fornecedor"
+    },
+    "telefone": {
+      "type": "string",
+      "description": "Telefone de contato"
+    },
+    "email": {
+      "type": "string",
+      "description": "Email do fornecedor"
+    },
+    "endereco": {
+      "type": "string",
+      "description": "Endere\u00e7o completo"
+    },
+    "ativo": {
+      "type": "boolean",
+      "default": true,
+      "description": "Status do fornecedor"
+    }
+  },
+  "required": [
+    "nome"
+  ]
+}
