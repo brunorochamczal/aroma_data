@@ -3,12 +3,11 @@ import { aroma } from "@/api/aromaClient";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { 
   Plus, Search, Edit2, Trash2, Phone, Mail, MapPin, 
-  Loader2, UserCheck, UserX, MoreVertical, Eye
+  Loader2, UserX, MoreVertical
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import {
   Dialog,
   DialogContent,
@@ -41,32 +40,54 @@ export default function Clientes() {
 
   const { data: clientes = [], isLoading } = useQuery({
     queryKey: ['clientes'],
-    queryFn: () => base44.entities.Cliente.list('-created_date'),
+    queryFn: async () => {
+      // Adapte conforme sua API real
+      const response = await aroma.clientes.listar();
+      return response.sort((a, b) => new Date(b.created_date) - new Date(a.created_date));
+    },
   });
 
   const createMutation = useMutation({
-    mutationFn: (data) => base44.entities.Cliente.create(data),
+    mutationFn: async (data) => {
+      return await aroma.clientes.criar(data);
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['clientes'] });
       toast.success("Cliente cadastrado com sucesso!");
       resetForm();
     },
+    onError: (error) => {
+      toast.error("Erro ao cadastrar cliente");
+      console.error(error);
+    },
   });
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, data }) => base44.entities.Cliente.update(id, data),
+    mutationFn: async ({ id, data }) => {
+      return await aroma.clientes.atualizar(id, data);
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['clientes'] });
       toast.success("Cliente atualizado com sucesso!");
       resetForm();
     },
+    onError: (error) => {
+      toast.error("Erro ao atualizar cliente");
+      console.error(error);
+    },
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (id) => base44.entities.Cliente.update(id, { ativo: false }),
+    mutationFn: async (id) => {
+      return await aroma.clientes.desativar(id);
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['clientes'] });
       toast.success("Cliente desativado com sucesso!");
+    },
+    onError: (error) => {
+      toast.error("Erro ao desativar cliente");
+      console.error(error);
     },
   });
 
