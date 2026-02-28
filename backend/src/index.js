@@ -11,15 +11,26 @@ const PORT = process.env.PORT || 3001;
 app.use(cors());
 app.use(express.json());
 
-// Health check
-app.get('/api/health', (req, res) => {
-  res.json({ status: 'ok', timestamp: new Date().toISOString() });
+// Rotas que seu frontend espera
+app.get('/api/vendas', (req, res) => {
+  // Retornar lista de vendas
+  res.json([
+    { id: 1, cliente: 'João', valor: 100, data: '2024-01-01' },
+    { id: 2, cliente: 'Maria', valor: 200, data: '2024-01-02' }
+  ]);
 });
 
-// Rotas serão adicionadas aqui
-// app.use('/api/auth', authRoutes);
-// app.use('/api/users', userRoutes);
+app.get('/api/vendas/:id', (req, res) => {
+  // Retornar uma venda específica
+  res.json({ id: req.params.id, cliente: 'João', valor: 100 });
+});
+
+app.post('/api/vendas', (req, res) => {
+  // Criar nova venda
+  const novaVenda = req.body;
+  res.status(201).json({ ...novaVenda, id: Date.now() });
+});
 
 app.listen(PORT, () => {
-  console.log(`Backend rodando na porta ${PORT}`);
+  console.log(`🚀 API rodando na porta ${PORT}`);
 });
