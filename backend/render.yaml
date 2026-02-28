@@ -1,0 +1,41 @@
+services:
+  - type: web
+    name: aroma-data-backend
+    runtime: node
+    repo: https://github.com/brunorochamczal/aroma_data
+    branch: main
+    rootDir: backend
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: NODE_VERSION
+        value: 18
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 3001
+      - key: FRONTEND_URL
+        value: https://aroma-data.onrender.com
+      - key: JWT_SECRET
+        generateValue: true
+      - key: JWT_REFRESH_SECRET
+        generateValue: true
+      - key: DATABASE_URL
+        fromDatabase:
+          name: aroma-data-db
+          property: connectionString
+      - key: REDIS_URL
+        fromService:
+          type: redis
+          name: aroma-data-redis
+          property: connectionString
+
+  - type: postgresql
+    name: aroma-data-db
+    plan: free
+    ipAllowList: []
+
+  - type: redis
+    name: aroma-data-redis
+    plan: free
+    maxmemoryPolicy: allkeys-lru
