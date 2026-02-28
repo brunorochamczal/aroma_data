@@ -40,11 +40,16 @@ export default function Fornecedores() {
 
   const { data: fornecedores = [], isLoading } = useQuery({
     queryKey: ['fornecedores'],
-    queryFn: () => base44.entities.Fornecedor.list('-created_date'),
+    queryFn: async () => {
+      const response = await aroma.fornecedores.listar();
+      return response.sort((a, b) => new Date(b.created_date) - new Date(a.created_date));
+    },
   });
 
   const createMutation = useMutation({
-    mutationFn: (data) => base44.entities.Fornecedor.create(data),
+    mutationFn: async (data) => {
+      return await aroma.fornecedores.criar(data);
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['fornecedores'] });
       toast.success("Fornecedor cadastrado com sucesso!");
@@ -53,7 +58,9 @@ export default function Fornecedores() {
   });
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, data }) => base44.entities.Fornecedor.update(id, data),
+    mutationFn: async ({ id, data }) => {
+      return await aroma.fornecedores.atualizar(id, data);
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['fornecedores'] });
       toast.success("Fornecedor atualizado com sucesso!");
@@ -62,7 +69,9 @@ export default function Fornecedores() {
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (id) => base44.entities.Fornecedor.update(id, { ativo: false }),
+    mutationFn: async (id) => {
+      return await aroma.fornecedores.desativar(id);
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['fornecedores'] });
       toast.success("Fornecedor desativado com sucesso!");
