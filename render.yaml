@@ -2,7 +2,7 @@ services:
   - type: web
     name: base44-app
     runtime: static
-    repo: https://github.com/SEU_USUARIO/SEU_REPO
+    repo: https://github.com/brunorochamczal/aroma_data
     branch: main
     buildCommand: npm install && npm run build
     staticPublishPath: ./dist
