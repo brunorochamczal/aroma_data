@@ -4,34 +4,40 @@ import { Produto } from '../models/Produto.js';
 
 const router = express.Router();
 
+// Todas as rotas exigem autenticação
 router.use(authenticate);
 
-// Listar produtos
+// LISTAR
 router.get('/', async (req, res) => {
   try {
     const produtos = await Produto.findAll();
+    console.log(`📦 ${produtos.length} produtos encontrados`);
     res.json(produtos);
   } catch (error) {
-    console.error('Erro ao listar produtos:', error);
+    console.error('❌ Erro ao listar produtos:', error);
     res.status(500).json({ error: error.message });
   }
 });
 
-// Criar produto
+// CRIAR
 router.post('/', async (req, res) => {
   try {
+    console.log('📦 Dados recebidos:', req.body);
+    
     const produto = await Produto.create({
       ...req.body,
       usuario_id: req.user.id
     });
+    
+    console.log('✅ Produto criado:', produto.id);
     res.status(201).json(produto);
   } catch (error) {
-    console.error('Erro ao criar produto:', error);
+    console.error('❌ Erro ao criar produto:', error);
     res.status(500).json({ error: error.message });
   }
 });
 
-// Buscar produto por ID
+// BUSCAR por ID
 router.get('/:id', async (req, res) => {
   try {
     const produto = await Produto.findById(req.params.id);
@@ -40,12 +46,12 @@ router.get('/:id', async (req, res) => {
     }
     res.json(produto);
   } catch (error) {
-    console.error('Erro ao buscar produto:', error);
+    console.error('❌ Erro ao buscar produto:', error);
     res.status(500).json({ error: error.message });
   }
 });
 
-// Atualizar produto
+// ATUALIZAR
 router.put('/:id', async (req, res) => {
   try {
     const produto = await Produto.update(req.params.id, req.body);
@@ -54,27 +60,12 @@ router.put('/:id', async (req, res) => {
     }
     res.json(produto);
   } catch (error) {
-    console.error('Erro ao atualizar produto:', error);
+    console.error('❌ Erro ao atualizar produto:', error);
     res.status(500).json({ error: error.message });
   }
 });
 
-// Atualizar estoque
-router.post('/:id/estoque', async (req, res) => {
-  try {
-    const { quantidade, operacao } = req.body;
-    const produto = await Produto.updateStock(req.params.id, quantidade, operacao);
-    if (!produto) {
-      return res.status(404).json({ error: 'Produto não encontrado ou estoque insuficiente' });
-    }
-    res.json(produto);
-  } catch (error) {
-    console.error('Erro ao atualizar estoque:', error);
-    res.status(500).json({ error: error.message });
-  }
-});
-
-// Desativar produto
+// DELETAR
 router.delete('/:id', async (req, res) => {
   try {
     const produto = await Produto.delete(req.params.id);
@@ -83,7 +74,22 @@ router.delete('/:id', async (req, res) => {
     }
     res.json({ message: 'Produto desativado com sucesso' });
   } catch (error) {
-    console.error('Erro ao desativar produto:', error);
+    console.error('❌ Erro ao desativar produto:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ATUALIZAR ESTOQUE
+router.post('/:id/estoque', async (req, res) => {
+  try {
+    const { quantidade, operacao } = req.body;
+    const produto = await Produto.updateStock(req.params.id, quantidade, operacao);
+    if (!produto) {
+      return res.status(404).json({ error: 'Produto não encontrado' });
+    }
+    res.json(produto);
+  } catch (error) {
+    console.error('❌ Erro ao atualizar estoque:', error);
     res.status(500).json({ error: error.message });
   }
 });
