@@ -60,7 +60,7 @@ export default function Layout({ children, currentPageName }) {
         {/* Logo */}
         <div className="h-16 flex items-center gap-2 px-4 border-b border-[#e8c9bc]">
           <img 
-            src="https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/69934d847f21bef6394c904f/101dec9a7_Aroma.png" 
+             
             alt="Aroma Data" 
             className="h-10 w-10 object-contain" 
           />
