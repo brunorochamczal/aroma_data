@@ -1,0 +1,37 @@
+{
+  "name": "NotificacaoEstoque",
+  "type": "object",
+  "properties": {
+    "produto_id": {
+      "type": "string",
+      "description": "ID do produto"
+    },
+    "produto_nome": {
+      "type": "string",
+      "description": "Nome do produto"
+    },
+    "estoque_atual": {
+      "type": "number",
+      "description": "Estoque no momento da notifica\u00e7\u00e3o"
+    },
+    "estoque_minimo": {
+      "type": "number",
+      "description": "Estoque m\u00ednimo configurado"
+    },
+    "email_enviado": {
+      "type": "boolean",
+      "default": false,
+      "description": "Se o email foi enviado"
+    },
+    "visualizada": {
+      "type": "boolean",
+      "default": false,
+      "description": "Se a notifica\u00e7\u00e3o foi visualizada/dispensada"
+    }
+  },
+  "required": [
+    "produto_id",
+    "produto_nome",
+    "estoque_atual"
+  ]
+}
