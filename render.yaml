@@ -1,50 +1,23 @@
 services:
-  # Frontend
   - type: static
-    name: sistema-frontend
+    name: aroma-data-frontend
     runtime: static
-    repo: https://github.com/seu-user/seu-repo
+    repo: https://github.com/brunorochamczal/aroma_data
     branch: main
     buildCommand: npm install && npm run build
     staticPublishPath: ./dist
     envVars:
-      - key: VITE_API_URL
-        value: https://sistema-backend.onrender.com/api
-
-  # Backend API
-  - type: web
-    name: sistema-backend
-    runtime: node
-    repo: https://github.com/seu-user/seu-repo
-    branch: main
-    rootDir: backend
-    buildCommand: npm install
-    startCommand: npm start
-    envVars:
-      - key: NODE_VERSION
-        value: 18
-      - key: PORT
-        value: 3001
-      - key: JWT_SECRET
-        generateValue: true
-      - key: DATABASE_URL
-        fromDatabase:
-          name: sistema-db
-          property: connectionString
-      - key: REDIS_URL
-        fromService:
-          type: redis
-          name: sistema-redis
-          property: connectionString
-
-  # Banco de Dados PostgreSQL
-  - type: postgresql
-    name: sistema-db
-    plan: free
-    ipAllowList: []
-
-  # Redis
-  - type: redis
-    name: sistema-redis
-    plan: free
-    maxmemoryPolicy: allkeys-lru
+      - key: VITE_APP_ID
+        sync: false  # Você define no dashboard do Render
+      - key: VITE_TOKEN
+        sync: false
+      - key: VITE_AROMA_URL
+        value: https://api.aroma.com  # URL do Aroma
+    headers:
+      - path: /*
+        name: X-Frame-Options
+        value: DENY
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
