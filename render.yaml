@@ -1,0 +1,19 @@
+services:
+  - type: web
+    name: base44-app
+    runtime: static
+    repo: https://github.com/SEU_USUARIO/SEU_REPO
+    branch: main
+    buildCommand: npm install && npm run build
+    staticPublishPath: ./dist
+    envVars:
+      - key: NODE_VERSION
+        value: 18
+    headers:
+      - path: /*
+        name: X-Frame-Options
+        value: DENY
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
