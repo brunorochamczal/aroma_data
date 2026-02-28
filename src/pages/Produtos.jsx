@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { base44 } from "@/api/base44Client";
+import { aroma } from "@/api/aromaClient";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { 
   Plus, Search, Edit2, Trash2, Package, 
