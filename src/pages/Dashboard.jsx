@@ -1,230 +1,315 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { aroma } from "@/api/aromaClient";
-import { useQuery } from "@tanstack/react-query";
-import { format, startOfMonth, endOfMonth, eachDayOfInterval, parseISO, subMonths } from "date-fns";
-import { ptBR } from "date-fns/locale";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { 
-  ShoppingCart, 
-  DollarSign, 
-  TrendingUp, 
-  Receipt,
-  Loader2
+  Plus, Search, Edit2, Trash2, Phone, Mail, MapPin, 
+  Loader2, UserX, MoreVertical
 } from "lucide-react";
-import StatsCard from "@/components/dashboard/StatsCard";
-import SalesChart from "@/components/dashboard/SalesChart";
-import TopProductsList from "@/components/dashboard/TopProductsList";
-import TopClientsList from "@/components/dashboard/TopClientsList";
-import LowStockAlert from "@/components/dashboard/LowStockAlert";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Card, CardContent } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { toast } from "sonner";
 
-export default function Dashboard() {
-  const [stats, setStats] = useState({
-    totalVendas: 0,
-    valorTotal: 0,
-    lucro: 0,
-    ticketMedio: 0,
+export default function Clientes() {
+  const [search, setSearch] = useState("");
+  const [showForm, setShowForm] = useState(false);
+  const [editingClient, setEditingClient] = useState(null);
+  const [formData, setFormData] = useState({
+    nome: "",
+    cpf: "",
+    telefone: "",
+    email: "",
+    endereco: "",
   });
-  const [chartData, setChartData] = useState([]);
-  const [topProducts, setTopProducts] = useState([]);
-  const [topClients, setTopClients] = useState([]);
-  const [lowStockProducts, setLowStockProducts] = useState([]);
 
-  const { data: vendas = [], isLoading: loadingVendas } = useQuery({
-    queryKey: ['vendas-dashboard'],
-    queryFn: () => base44.entities.Venda.list('-created_date', 500),
+  const queryClient = useQueryClient();
+
+  const { data: clientes = [], isLoading } = useQuery({
+    queryKey: ['clientes'],
+    queryFn: async () => {
+      // Adapte conforme sua API real
+      const response = await aroma.clientes.listar();
+      return response.sort((a, b) => new Date(b.created_date) - new Date(a.created_date));
+    },
   });
 
-  const { data: produtos = [], isLoading: loadingProdutos } = useQuery({
-    queryKey: ['produtos-dashboard'],
-    queryFn: () => base44.entities.Produto.list(),
+  const createMutation = useMutation({
+    mutationFn: async (data) => {
+      return await aroma.clientes.criar(data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['clientes'] });
+      toast.success("Cliente cadastrado com sucesso!");
+      resetForm();
+    },
+    onError: (error) => {
+      toast.error("Erro ao cadastrar cliente");
+      console.error(error);
+    },
   });
 
-  useEffect(() => {
-    calculateStats();
-    generateChartData();
-    calculateTopProducts();
-    calculateTopClients();
-    checkLowStock();
-  }, [vendas, produtos]);
+  const updateMutation = useMutation({
+    mutationFn: async ({ id, data }) => {
+      return await aroma.clientes.atualizar(id, data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['clientes'] });
+      toast.success("Cliente atualizado com sucesso!");
+      resetForm();
+    },
+    onError: (error) => {
+      toast.error("Erro ao atualizar cliente");
+      console.error(error);
+    },
+  });
 
-  const calculateStats = () => {
-    const now = new Date();
-    const monthStart = startOfMonth(now);
-    const monthEnd = endOfMonth(now);
+  const deleteMutation = useMutation({
+    mutationFn: async (id) => {
+      return await aroma.clientes.desativar(id);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['clientes'] });
+      toast.success("Cliente desativado com sucesso!");
+    },
+    onError: (error) => {
+      toast.error("Erro ao desativar cliente");
+      console.error(error);
+    },
+  });
 
-    const vendasMes = vendas.filter(v => {
-      if (v.cancelada) return false;
-      const vendaDate = new Date(v.created_date);
-      return vendaDate >= monthStart && vendaDate <= monthEnd;
-    });
-
-    const valorTotal = vendasMes.reduce((acc, v) => acc + (v.valor_final || v.valor_total || 0), 0);
-    
-    // Calcular lucro baseado nos preços de custo
-    let lucro = 0;
-    vendasMes.forEach(venda => {
-      if (venda.itens) {
-        venda.itens.forEach(item => {
-          const produto = produtos.find(p => p.id === item.produto_id);
-          if (produto) {
-            const custoTotal = (produto.preco_custo || 0) * item.quantidade;
-            const vendaTotal = item.subtotal || (item.preco_unitario * item.quantidade);
-            lucro += vendaTotal - custoTotal;
-          }
-        });
-      }
-    });
-
-    setStats({
-      totalVendas: vendasMes.length,
-      valorTotal,
-      lucro,
-      ticketMedio: vendasMes.length > 0 ? valorTotal / vendasMes.length : 0,
-    });
+  const resetForm = () => {
+    setFormData({ nome: "", cpf: "", telefone: "", email: "", endereco: "" });
+    setEditingClient(null);
+    setShowForm(false);
   };
 
-  const generateChartData = () => {
-    const now = new Date();
-    const monthStart = startOfMonth(now);
-    const monthEnd = endOfMonth(now);
-    const days = eachDayOfInterval({ start: monthStart, end: monthEnd });
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    if (editingClient) {
+      updateMutation.mutate({ id: editingClient.id, data: formData });
+    } else {
+      createMutation.mutate({ ...formData, ativo: true });
+    }
+  };
 
-    const data = days.map(day => {
-      const dayStr = format(day, 'yyyy-MM-dd');
-      const dayVendas = vendas.filter(v => {
-        if (v.cancelada) return false;
-        const vendaDate = format(new Date(v.created_date), 'yyyy-MM-dd');
-        return vendaDate === dayStr;
-      });
-      const valor = dayVendas.reduce((acc, v) => acc + (v.valor_final || v.valor_total || 0), 0);
-      return {
-        dia: format(day, 'dd/MM'),
-        valor,
-      };
+  const handleEdit = (client) => {
+    setEditingClient(client);
+    setFormData({
+      nome: client.nome || "",
+      cpf: client.cpf || "",
+      telefone: client.telefone || "",
+      email: client.email || "",
+      endereco: client.endereco || "",
     });
-
-    setChartData(data);
+    setShowForm(true);
   };
 
-  const calculateTopProducts = () => {
-    const productSales = {};
-    
-    vendas.forEach(venda => {
-      if (venda.cancelada) return;
-      if (venda.itens) {
-        venda.itens.forEach(item => {
-          const id = item.produto_id;
-          if (!productSales[id]) {
-            productSales[id] = {
-              id,
-              nome: item.produto_nome || "Produto",
-              quantidade: 0,
-            };
-          }
-          productSales[id].quantidade += item.quantidade;
-        });
-      }
-    });
-
-    const sorted = Object.values(productSales)
-      .sort((a, b) => b.quantidade - a.quantidade)
-      .slice(0, 5);
-
-    setTopProducts(sorted);
-  };
-
-  const calculateTopClients = () => {
-    const clientSales = {};
-    
-    vendas.forEach(venda => {
-      if (venda.cancelada) return;
-      const id = venda.cliente_id || 'avulso';
-      const nome = venda.cliente_nome || 'Venda Avulsa';
-      
-      if (!clientSales[id]) {
-        clientSales[id] = {
-          id,
-          nome,
-          total: 0,
-        };
-      }
-      clientSales[id].total += venda.valor_final || venda.valor_total || 0;
-    });
-
-    const sorted = Object.values(clientSales)
-      .sort((a, b) => b.total - a.total)
-      .slice(0, 5);
-
-    setTopClients(sorted);
-  };
-
-  const checkLowStock = () => {
-    const lowStock = produtos.filter(p => 
-      p.ativo !== false && 
-      (p.estoque_atual || 0) <= (p.estoque_minimo || 5)
-    );
-    setLowStockProducts(lowStock);
-  };
-
-  const isLoading = loadingVendas || loadingProdutos;
-
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-[60vh]">
-        <div className="flex flex-col items-center gap-4">
-          <Loader2 className="h-10 w-10 animate-spin text-[#C4967A]" />
-          <p className="text-gray-500">Carregando dashboard...</p>
-        </div>
-      </div>
-    );
-  }
+  const filteredClientes = clientes.filter(c => 
+    c.ativo !== false && 
+    (c.nome?.toLowerCase().includes(search.toLowerCase()) ||
+     c.cpf?.includes(search) ||
+     c.email?.toLowerCase().includes(search.toLowerCase()))
+  );
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl lg:text-3xl font-bold text-gray-900">Dashboard</h1>
-        <p className="text-gray-500 mt-1">
-          Resumo do mês de {format(new Date(), "MMMM 'de' yyyy", { locale: ptBR })}
-        </p>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <h1 className="text-2xl lg:text-3xl font-bold text-gray-900">Clientes</h1>
+          <p className="text-gray-500 mt-1">{filteredClientes.length} clientes cadastrados</p>
+        </div>
+        <Button 
+          onClick={() => setShowForm(true)}
+          className="bg-gradient-to-r from-purple-600 to-violet-600 hover:from-purple-700 hover:to-violet-700"
+        >
+          <Plus className="h-4 w-4 mr-2" />
+          Novo Cliente
+        </Button>
       </div>
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatsCard 
-          title="Total de Vendas"
-          value={stats.totalVendas}
-          icon={ShoppingCart}
-          color="purple"
-        />
-        <StatsCard 
-          title="Receita"
-          value={`R$ ${stats.valorTotal.toFixed(2)}`}
-          icon={DollarSign}
-          color="green"
-        />
-        <StatsCard 
-          title="Lucro Bruto"
-          value={`R$ ${stats.lucro.toFixed(2)}`}
-          icon={TrendingUp}
-          color="blue"
-        />
-        <StatsCard 
-          title="Ticket Médio"
-          value={`R$ ${stats.ticketMedio.toFixed(2)}`}
-          icon={Receipt}
-          color="amber"
+      <div className="relative">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+        <Input 
+          placeholder="Buscar por nome, CPF ou email..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="pl-10 bg-white/70 border-purple-100"
         />
       </div>
 
-      {/* Charts and Lists */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <SalesChart data={chartData} />
-        <LowStockAlert products={lowStockProducts} />
-      </div>
+      {isLoading ? (
+        <div className="flex items-center justify-center py-12">
+          <Loader2 className="h-8 w-8 animate-spin text-purple-600" />
+        </div>
+      ) : filteredClientes.length === 0 ? (
+        <Card className="bg-white/70 border-0 shadow-lg">
+          <CardContent className="flex flex-col items-center justify-center py-12">
+            <UserX className="h-16 w-16 text-gray-300 mb-4" />
+            <p className="text-gray-500 text-lg">Nenhum cliente encontrado</p>
+            <Button 
+              variant="link" 
+              onClick={() => setShowForm(true)}
+              className="text-purple-600 mt-2"
+            >
+              Cadastrar primeiro cliente
+            </Button>
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {filteredClientes.map((cliente) => (
+            <Card 
+              key={cliente.id} 
+              className="bg-white/70 border-0 shadow-lg hover:shadow-xl transition-all duration-300 group"
+            >
+              <CardContent className="p-5">
+                <div className="flex items-start justify-between mb-4">
+                  <div className="flex items-center gap-3">
+                    <div className="w-12 h-12 rounded-full bg-gradient-to-br from-purple-500 to-violet-600 flex items-center justify-center text-white text-lg font-bold">
+                      {cliente.nome?.[0] || "C"}
+                    </div>
+                    <div>
+                      <h3 className="font-semibold text-gray-900">{cliente.nome}</h3>
+                      {cliente.cpf && (
+                        <p className="text-sm text-gray-500">{cliente.cpf}</p>
+                      )}
+                    </div>
+                  </div>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" size="icon" className="opacity-0 group-hover:opacity-100 transition-opacity">
+                        <MoreVertical className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem onClick={() => handleEdit(cliente)}>
+                        <Edit2 className="h-4 w-4 mr-2" />
+                        Editar
+                      </DropdownMenuItem>
+                      <DropdownMenuItem 
+                        onClick={() => deleteMutation.mutate(cliente.id)}
+                        className="text-red-600"
+                      >
+                        <Trash2 className="h-4 w-4 mr-2" />
+                        Desativar
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <TopProductsList products={topProducts} />
-        <TopClientsList clients={topClients} />
-      </div>
+                <div className="space-y-2">
+                  {cliente.telefone && (
+                    <div className="flex items-center gap-2 text-sm text-gray-600">
+                      <Phone className="h-4 w-4 text-purple-500" />
+                      {cliente.telefone}
+                    </div>
+                  )}
+                  {cliente.email && (
+                    <div className="flex items-center gap-2 text-sm text-gray-600">
+                      <Mail className="h-4 w-4 text-purple-500" />
+                      <span className="truncate">{cliente.email}</span>
+                    </div>
+                  )}
+                  {cliente.endereco && (
+                    <div className="flex items-center gap-2 text-sm text-gray-600">
+                      <MapPin className="h-4 w-4 text-purple-500" />
+                      <span className="truncate">{cliente.endereco}</span>
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
+
+      <Dialog open={showForm} onOpenChange={(open) => !open && resetForm()}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>
+              {editingClient ? "Editar Cliente" : "Novo Cliente"}
+            </DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="nome">Nome *</Label>
+              <Input 
+                id="nome"
+                value={formData.nome}
+                onChange={(e) => setFormData({ ...formData, nome: e.target.value })}
+                required
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="cpf">CPF</Label>
+                <Input 
+                  id="cpf"
+                  value={formData.cpf}
+                  onChange={(e) => setFormData({ ...formData, cpf: e.target.value })}
+                  placeholder="000.000.000-00"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="telefone">Telefone</Label>
+                <Input 
+                  id="telefone"
+                  value={formData.telefone}
+                  onChange={(e) => setFormData({ ...formData, telefone: e.target.value })}
+                  placeholder="(00) 00000-0000"
+                />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="email">Email</Label>
+              <Input 
+                id="email"
+                type="email"
+                value={formData.email}
+                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="endereco">Endereço</Label>
+              <Textarea 
+                id="endereco"
+                value={formData.endereco}
+                onChange={(e) => setFormData({ ...formData, endereco: e.target.value })}
+                rows={2}
+              />
+            </div>
+            <div className="flex gap-3 pt-4">
+              <Button type="button" variant="outline" onClick={resetForm} className="flex-1">
+                Cancelar
+              </Button>
+              <Button 
+                type="submit" 
+                className="flex-1 bg-gradient-to-r from-purple-600 to-violet-600"
+                disabled={createMutation.isPending || updateMutation.isPending}
+              >
+                {(createMutation.isPending || updateMutation.isPending) && (
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                )}
+                {editingClient ? "Salvar" : "Cadastrar"}
+              </Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
