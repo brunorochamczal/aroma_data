@@ -4,12 +4,12 @@ export const Fornecedor = {
   async findAll() {
     try {
       const result = await query(
-        'SELECT * FROM fornecedores WHERE ativo = true ORDER BY nome'
+        'SELECT * FROM fornecedores WHERE ativo = true ORDER BY created_at DESC'
       );
       return result.rows;
     } catch (error) {
-      console.error('Erro em Fornecedor.findAll:', error);
-      return [];
+      console.error('❌ Erro em Fornecedor.findAll:', error);
+      throw error;
     }
   },
 
@@ -25,7 +25,7 @@ export const Fornecedor = {
       );
       return result.rows[0];
     } catch (error) {
-      console.error('Erro em Fornecedor.create:', error);
+      console.error('❌ Erro em Fornecedor.create:', error);
       throw error;
     }
   },
@@ -38,8 +38,8 @@ export const Fornecedor = {
       );
       return result.rows[0];
     } catch (error) {
-      console.error('Erro em Fornecedor.findById:', error);
-      return null;
+      console.error('❌ Erro em Fornecedor.findById:', error);
+      throw error;
     }
   },
 
@@ -56,7 +56,7 @@ export const Fornecedor = {
       );
       return result.rows[0];
     } catch (error) {
-      console.error('Erro em Fornecedor.update:', error);
+      console.error('❌ Erro em Fornecedor.update:', error);
       throw error;
     }
   },
@@ -69,7 +69,7 @@ export const Fornecedor = {
       );
       return result.rows[0];
     } catch (error) {
-      console.error('Erro em Fornecedor.delete:', error);
+      console.error('❌ Erro em Fornecedor.delete:', error);
       throw error;
     }
   }
