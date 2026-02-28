@@ -1,6 +1,9 @@
 import express from 'express';
 import cors from 'cors';
+import helmet from 'helmet';
+import morgan from 'morgan';
 import dotenv from 'dotenv';
+import authRoutes from './routes/authRoutes.js';
 
 dotenv.config();
 
@@ -8,29 +11,50 @@ const app = express();
 const PORT = process.env.PORT || 3001;
 
 // Middlewares
-app.use(cors());
+app.use(helmet());
+app.use(cors({
+  origin: process.env.FRONTEND_URL || 'http://localhost:3000',
+  credentials: true
+}));
+app.use(morgan('combined'));
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
-// Rotas que seu frontend espera
-app.get('/api/vendas', (req, res) => {
-  // Retornar lista de vendas
-  res.json([
-    { id: 1, cliente: 'João', valor: 100, data: '2024-01-01' },
-    { id: 2, cliente: 'Maria', valor: 200, data: '2024-01-02' }
-  ]);
+// Rotas
+app.use('/api/auth', authRoutes);
+
+// Rota de saúde para o Render
+app.get('/api/health', (req, res) => {
+  res.json({ 
+    status: 'ok', 
+    timestamp: new Date().toISOString(),
+    message: 'Aroma Data API funcionando!'
+  });
 });
 
-app.get('/api/vendas/:id', (req, res) => {
-  // Retornar uma venda específica
-  res.json({ id: req.params.id, cliente: 'João', valor: 100 });
+// Rota raiz
+app.get('/', (req, res) => {
+  res.json({ 
+    message: 'Aroma Data API',
+    version: '1.0.0',
+    endpoints: {
+      auth: '/api/auth',
+      health: '/api/health'
+    }
+  });
 });
 
-app.post('/api/vendas', (req, res) => {
-  // Criar nova venda
-  const novaVenda = req.body;
-  res.status(201).json({ ...novaVenda, id: Date.now() });
+// Error handling
+app.use((err, req, res, next) => {
+  console.error(err.stack);
+  res.status(500).json({ error: 'Something broke!' });
+});
+
+// 404 handler
+app.use((req, res) => {
+  res.status(404).json({ error: 'Route not found' });
 });
 
 app.listen(PORT, () => {
-  console.log(`🚀 API rodando na porta ${PORT}`);
+  console.log(`🚀 Servidor rodando na porta ${PORT}`);
 });
