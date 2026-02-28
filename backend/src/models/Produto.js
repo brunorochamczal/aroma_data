@@ -1,7 +1,7 @@
 import { query } from '../config/database.js';
 
 export const Produto = {
-  // LISTAR todos os produtos
+  // LISTAR todos
   async findAll() {
     try {
       const result = await query(
@@ -14,7 +14,21 @@ export const Produto = {
     }
   },
 
-  // CRIAR produto
+  // BUSCAR por ID
+  async findById(id) {
+    try {
+      const result = await query(
+        'SELECT * FROM produtos WHERE id = $1 AND ativo = true',
+        [id]
+      );
+      return result.rows[0];
+    } catch (error) {
+      console.error('Erro em Produto.findById:', error);
+      return null;
+    }
+  },
+
+  // CRIAR
   async create(data) {
     const { 
       nome, marca, volume, preco_custo, preco_venda, 
@@ -34,20 +48,6 @@ export const Produto = {
     } catch (error) {
       console.error('Erro em Produto.create:', error);
       throw error;
-    }
-  },
-
-  // BUSCAR por ID
-  async findById(id) {
-    try {
-      const result = await query(
-        'SELECT * FROM produtos WHERE id = $1 AND ativo = true',
-        [id]
-      );
-      return result.rows[0];
-    } catch (error) {
-      console.error('Erro em Produto.findById:', error);
-      return null;
     }
   },
 
@@ -84,6 +84,24 @@ export const Produto = {
       return result.rows[0];
     } catch (error) {
       console.error('Erro em Produto.delete:', error);
+      throw error;
+    }
+  },
+
+  // MÉTODO ESPECÍFICO DE PRODUTO
+  async updateStock(id, quantidade, operacao = 'add') {
+    try {
+      let sql;
+      if (operacao === 'add') {
+        sql = 'UPDATE produtos SET estoque_atual = estoque_atual + $1, updated_at = NOW() WHERE id = $2 AND ativo = true RETURNING *';
+      } else {
+        sql = 'UPDATE produtos SET estoque_atual = estoque_atual - $1, updated_at = NOW() WHERE id = $2 AND ativo = true AND estoque_atual >= $1 RETURNING *';
+      }
+      
+      const result = await query(sql, [quantidade, id]);
+      return result.rows[0];
+    } catch (error) {
+      console.error('Erro em Produto.updateStock:', error);
       throw error;
     }
   }
