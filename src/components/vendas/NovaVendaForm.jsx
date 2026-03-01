@@ -5,25 +5,22 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
-import { Loader2, Plus, Trash2, Search } from "lucide-react";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Loader2, Plus, Trash2, Search, User } from "lucide-react";
 import { toast } from "sonner";
 
 const NovaVendaForm = ({ onSuccess, onCancel }) => {
-  // Estados simples
-  const [clienteId, setClienteId] = useState("");
-  const [clienteNome, setClienteNome] = useState("");
-  const [itens, setItens] = useState([]);
-  const [produtoId, setProdutoId] = useState("");
-  const [quantidade, setQuantidade] = useState(1);
-  const [searchText, setSearchText] = useState("");
+  // Estados para cliente (MESMO PADRÃO DOS PRODUTOS)
+  const [clienteSearchText, setClienteSearchText] = useState("");
+  const [clientesVisiveis, setClientesVisiveis] = useState([]);
+  const [clienteSelecionado, setClienteSelecionado] = useState(null);
+  const [clienteNomeAvulso, setClienteNomeAvulso] = useState("");
+
+  // Estados para produtos
+  const [produtoSearchText, setProdutoSearchText] = useState("");
   const [produtosVisiveis, setProdutosVisiveis] = useState([]);
+  const [produtoSelecionado, setProdutoSelecionado] = useState(null);
+  const [quantidade, setQuantidade] = useState(1);
+  const [itens, setItens] = useState([]);
 
   // Buscar produtos
   const { data: produtos = [], isLoading: loadingProdutos } = useQuery({
@@ -43,19 +40,34 @@ const NovaVendaForm = ({ onSuccess, onCancel }) => {
     },
   });
 
+  // Efeito para filtrar clientes (MESMO PADRÃO DOS PRODUTOS)
+  useEffect(() => {
+    if (!clienteSearchText.trim()) {
+      setClientesVisiveis([]);
+      return;
+    }
+
+    const filtrados = clientes.filter(c => 
+      c.nome?.toLowerCase().includes(clienteSearchText.toLowerCase()) ||
+      c.email?.toLowerCase().includes(clienteSearchText.toLowerCase()) ||
+      c.cpf?.includes(clienteSearchText)
+    );
+    setClientesVisiveis(filtrados);
+  }, [clienteSearchText, clientes]);
+
   // Efeito para filtrar produtos
   useEffect(() => {
-    if (!searchText.trim()) {
+    if (!produtoSearchText.trim()) {
       setProdutosVisiveis([]);
       return;
     }
 
     const filtrados = produtos.filter(p => 
-      p.nome?.toLowerCase().includes(searchText.toLowerCase()) ||
-      p.marca?.toLowerCase().includes(searchText.toLowerCase())
+      p.nome?.toLowerCase().includes(produtoSearchText.toLowerCase()) ||
+      p.marca?.toLowerCase().includes(produtoSearchText.toLowerCase())
     );
     setProdutosVisiveis(filtrados);
-  }, [searchText, produtos]);
+  }, [produtoSearchText, produtos]);
 
   const criarVendaMutation = useMutation({
     mutationFn: async (dados) => {
@@ -76,36 +88,33 @@ const NovaVendaForm = ({ onSuccess, onCancel }) => {
   };
 
   const adicionarItem = () => {
-    if (!produtoId) {
+    if (!produtoSelecionado) {
       toast.error("Selecione um produto");
       return;
     }
-
-    const produto = produtos.find(p => p.id === produtoId);
-    if (!produto) return;
 
     if (quantidade < 1) {
       toast.error("Quantidade inválida");
       return;
     }
 
-    if (produto.estoque_atual < quantidade) {
-      toast.error(`Estoque insuficiente. Disponível: ${produto.estoque_atual}`);
+    if (produtoSelecionado.estoque_atual < quantidade) {
+      toast.error(`Estoque insuficiente. Disponível: ${produtoSelecionado.estoque_atual}`);
       return;
     }
 
     const novoItem = {
-      produto_id: produto.id,
-      produto_nome: produto.nome,
+      produto_id: produtoSelecionado.id,
+      produto_nome: produtoSelecionado.nome,
       quantidade: quantidade,
-      preco_unitario: parseFloat(produto.preco_venda) || 0,
-      subtotal: (parseFloat(produto.preco_venda) || 0) * quantidade
+      preco_unitario: parseFloat(produtoSelecionado.preco_venda) || 0,
+      subtotal: (parseFloat(produtoSelecionado.preco_venda) || 0) * quantidade
     };
 
     setItens([...itens, novoItem]);
-    setProdutoId("");
+    setProdutoSelecionado(null);
     setQuantidade(1);
-    setSearchText("");
+    setProdutoSearchText("");
   };
 
   const removerItem = (index) => {
@@ -114,6 +123,18 @@ const NovaVendaForm = ({ onSuccess, onCancel }) => {
 
   const calcularTotal = () => {
     return itens.reduce((acc, item) => acc + item.subtotal, 0);
+  };
+
+  const selecionarCliente = (cliente) => {
+    setClienteSelecionado(cliente);
+    setClienteNomeAvulso("");
+    setClienteSearchText("");
+    setClientesVisiveis([]);
+  };
+
+  const limparCliente = () => {
+    setClienteSelecionado(null);
+    setClienteSearchText("");
   };
 
   const handleSubmit = (e) => {
@@ -125,15 +146,14 @@ const NovaVendaForm = ({ onSuccess, onCancel }) => {
     }
 
     let nomeCliente = "Venda Avulsa";
-    if (clienteId) {
-      const cliente = clientes.find(c => c.id === clienteId);
-      nomeCliente = cliente?.nome || "Venda Avulsa";
-    } else if (clienteNome.trim()) {
-      nomeCliente = clienteNome.trim();
+    if (clienteSelecionado) {
+      nomeCliente = clienteSelecionado.nome;
+    } else if (clienteNomeAvulso.trim()) {
+      nomeCliente = clienteNomeAvulso.trim();
     }
 
     const vendaData = {
-      cliente_id: clienteId || null,
+      cliente_id: clienteSelecionado?.id || null,
       cliente_nome: nomeCliente,
       itens: itens,
       valor_total: calcularTotal(),
@@ -153,95 +173,159 @@ const NovaVendaForm = ({ onSuccess, onCancel }) => {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
-      {/* Cliente */}
+      {/* SEÇÃO CLIENTE - IGUAL AOS PRODUTOS */}
       <div className="space-y-4">
-        <Label className="text-lg font-semibold">Cliente</Label>
-        
-        <Select value={clienteId} onValueChange={setClienteId}>
-          <SelectTrigger>
-            <SelectValue placeholder="Selecione um cliente" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="">Venda Avulsa</SelectItem>
-            {clientes.map((cliente) => (
-              <SelectItem key={cliente.id} value={cliente.id}>
-                {cliente.nome}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <Label className="text-lg font-semibold flex items-center gap-2">
+          <User className="h-5 w-5 text-purple-600" />
+          Cliente
+        </Label>
 
-        {!clienteId && (
-          <Input
-            placeholder="Nome do cliente (para venda avulsa)"
-            value={clienteNome}
-            onChange={(e) => setClienteNome(e.target.value)}
-          />
+        {!clienteSelecionado ? (
+          <>
+            <Input
+              placeholder="Digite para buscar clientes..."
+              value={clienteSearchText}
+              onChange={(e) => setClienteSearchText(e.target.value)}
+              autoComplete="off"
+            />
+
+            {clientesVisiveis.length > 0 && (
+              <div className="border rounded-lg p-2 max-h-60 overflow-y-auto bg-white shadow-lg">
+                {clientesVisiveis.map((cliente) => (
+                  <div
+                    key={cliente.id}
+                    className="p-3 cursor-pointer hover:bg-purple-50 rounded-lg border-b last:border-0 transition-colors"
+                    onClick={() => selecionarCliente(cliente)}
+                  >
+                    <div className="font-medium">{cliente.nome}</div>
+                    <div className="text-sm text-gray-500">
+                      {cliente.email && <span>{cliente.email} • </span>}
+                      {cliente.telefone && <span>{cliente.telefone}</span>}
+                      {cliente.cpf && <span className="ml-2">CPF: {cliente.cpf}</span>}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Opção de venda avulsa */}
+            <div className="mt-4 p-4 bg-purple-50 rounded-lg">
+              <p className="text-sm font-medium text-purple-700 mb-2">Venda Avulsa</p>
+              <Input
+                placeholder="Nome do cliente (opcional)"
+                value={clienteNomeAvulso}
+                onChange={(e) => setClienteNomeAvulso(e.target.value)}
+              />
+            </div>
+          </>
+        ) : (
+          <div className="p-4 bg-purple-50 rounded-lg flex items-center justify-between">
+            <div>
+              <p className="font-medium">{clienteSelecionado.nome}</p>
+              <p className="text-sm text-gray-600">
+                {clienteSelecionado.email && <span>{clienteSelecionado.email} • </span>}
+                {clienteSelecionado.telefone}
+              </p>
+            </div>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={limparCliente}
+              className="text-purple-600 hover:text-purple-800"
+            >
+              Trocar cliente
+            </Button>
+          </div>
         )}
       </div>
 
-      {/* Busca de Produtos */}
+      {/* SEÇÃO PRODUTOS */}
       <div className="space-y-4">
-        <Label className="text-lg font-semibold">Produtos</Label>
-        
+        <Label className="text-lg font-semibold flex items-center gap-2">
+          <Search className="h-5 w-5 text-purple-600" />
+          Produtos
+        </Label>
+
         <Input
           placeholder="Digite para buscar produtos..."
-          value={searchText}
-          onChange={(e) => setSearchText(e.target.value)}
+          value={produtoSearchText}
+          onChange={(e) => setProdutoSearchText(e.target.value)}
+          autoComplete="off"
         />
 
         {produtosVisiveis.length > 0 && (
-          <div className="border rounded-lg p-2 max-h-60 overflow-y-auto">
+          <div className="border rounded-lg p-2 max-h-60 overflow-y-auto bg-white shadow-lg">
             {produtosVisiveis.map((produto) => (
               <div
                 key={produto.id}
-                className={`p-2 cursor-pointer hover:bg-purple-50 rounded ${
-                  produtoId === produto.id ? 'bg-purple-100 border border-purple-300' : ''
+                className={`p-3 cursor-pointer hover:bg-purple-50 rounded-lg border-b last:border-0 transition-colors ${
+                  produtoSelecionado?.id === produto.id ? 'bg-purple-100' : ''
                 }`}
                 onClick={() => {
-                  setProdutoId(produto.id);
-                  setSearchText("");
+                  setProdutoSelecionado(produto);
+                  setProdutoSearchText("");
                   setProdutosVisiveis([]);
                 }}
               >
                 <div className="font-medium">{produto.nome}</div>
                 <div className="text-sm text-gray-500">
-                  {produto.marca} - R$ {formatPrice(produto.preco_venda)}
-                  {' '}(Estoque: {produto.estoque_atual})
+                  {produto.marca && <span>{produto.marca} • </span>}
+                  <span>R$ {formatPrice(produto.preco_venda)}</span>
+                  <span className="ml-2">Estoque: {produto.estoque_atual}</span>
                 </div>
               </div>
             ))}
           </div>
         )}
+
+        {produtoSelecionado && (
+          <div className="p-4 bg-purple-50 rounded-lg">
+            <div className="flex items-center justify-between mb-3">
+              <div>
+                <p className="font-medium">{produtoSelecionado.nome}</p>
+                <p className="text-sm text-gray-600">
+                  Preço: R$ {formatPrice(produtoSelecionado.preco_venda)}
+                </p>
+              </div>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() => setProdutoSelecionado(null)}
+              >
+                Trocar
+              </Button>
+            </div>
+
+            <div className="flex gap-4 items-end">
+              <div className="flex-1">
+                <Label>Quantidade</Label>
+                <Input
+                  type="number"
+                  min="1"
+                  max={produtoSelecionado.estoque_atual}
+                  value={quantidade}
+                  onChange={(e) => setQuantidade(parseInt(e.target.value) || 1)}
+                />
+              </div>
+              <Button
+                type="button"
+                onClick={adicionarItem}
+                className="bg-purple-600 hover:bg-purple-700"
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                Adicionar
+              </Button>
+            </div>
+          </div>
+        )}
       </div>
 
-      {/* Quantidade e Adicionar */}
-      {produtoId && (
-        <div className="flex gap-4 items-end">
-          <div className="flex-1">
-            <Label>Quantidade</Label>
-            <Input
-              type="number"
-              min="1"
-              value={quantidade}
-              onChange={(e) => setQuantidade(parseInt(e.target.value) || 1)}
-            />
-          </div>
-          <Button
-            type="button"
-            onClick={adicionarItem}
-            className="bg-purple-600 hover:bg-purple-700"
-          >
-            <Plus className="h-4 w-4 mr-2" />
-            Adicionar
-          </Button>
-        </div>
-      )}
-
-      {/* Lista de Itens */}
+      {/* LISTA DE ITENS */}
       {itens.length > 0 && (
-        <div className="border rounded-lg p-4">
-          <h3 className="font-semibold mb-2">Itens da Venda</h3>
+        <div className="border rounded-lg p-4 bg-white">
+          <h3 className="font-semibold mb-3">Itens da Venda</h3>
           {itens.map((item, index) => (
             <div key={index} className="flex justify-between items-center py-2 border-b last:border-0">
               <div>
@@ -259,7 +343,7 @@ const NovaVendaForm = ({ onSuccess, onCancel }) => {
                   variant="ghost"
                   size="icon"
                   onClick={() => removerItem(index)}
-                  className="text-red-500"
+                  className="text-red-500 hover:text-red-700"
                 >
                   <Trash2 className="h-4 w-4" />
                 </Button>
@@ -276,8 +360,8 @@ const NovaVendaForm = ({ onSuccess, onCancel }) => {
         </div>
       )}
 
-      {/* Botões */}
-      <div className="flex gap-3">
+      {/* BOTÕES */}
+      <div className="flex gap-3 pt-4">
         <Button type="button" variant="outline" onClick={onCancel} className="flex-1">
           Cancelar
         </Button>
