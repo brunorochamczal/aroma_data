@@ -10,15 +10,14 @@ import Relatorios from './pages/Relatorios';
 import Vendas from './pages/Vendas';
 import __Layout from './Layout.jsx';
 
-// Log para debug (vai aparecer no console do navegador)
-console.log('📄 Páginas importadas:', {
-  Clientes: !!Clientes,
-  Dashboard: !!Dashboard,
-  Fornecedores: !!Fornecedores,
-  Produtos: !!Produtos,
-  Relatorios: !!Relatorios,
-  Vendas: !!Vendas
-});
+// LOG DETALHADO
+console.log('📦 Importação de páginas:');
+console.log('   - Clientes:', Clientes ? '✅' : '❌');
+console.log('   - Dashboard:', Dashboard ? '✅' : '❌');
+console.log('   - Fornecedores:', Fornecedores ? '✅' : '❌');
+console.log('   - Produtos:', Produtos ? '✅' : '❌');
+console.log('   - Relatorios:', Relatorios ? '✅' : '❌');
+console.log('   - Vendas:', Vendas ? '✅' : '❌');
 
 export const PAGES = {
     "Clientes": Clientes,
@@ -35,7 +34,8 @@ export const pagesConfig = {
     Layout: __Layout,
 };
 
-// Para debug no console
+// EXPOR PARA DEBUG
 if (typeof window !== 'undefined') {
     window.pagesConfig = pagesConfig;
+    console.log('✅ pagesConfig exposto em window.pagesConfig');
 }
