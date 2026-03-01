@@ -1,4 +1,4 @@
-# Aroma Data - Sistema de Gestão de Perfumaria
+# Aroma Data - Gestão para vendedores autônomos de perfumaria
 
 <p align="center">
   <img src="./aroma.png" alt="Dashboard" width="300"/>
