@@ -5,9 +5,9 @@
 import Clientes from './pages/Clientes';
 import Dashboard from './pages/Dashboard';
 import Fornecedores from './pages/Fornecedores';
-import Produtos from './pages/Produtos';
-import Relatorios from './pages/Relatorios';
-import Vendas from './pages/Vendas';
+import Produtos from './pages/Produtos';        // DEVE ESTAR AQUI
+import Relatorios from './pages/Relatorios';    // DEVE ESTAR AQUI
+import Vendas from './pages/Vendas';            // DEVE ESTAR AQUI
 import __Layout from './Layout.jsx';
 
 // LOG DETALHADO
