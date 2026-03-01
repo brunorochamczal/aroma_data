@@ -156,4 +156,4 @@ Obrigado por utilizar o **Aroma Data**! Esperamos que este sistema ajude a impul
 
 ---
 
-<p align="center">Desenvolvido com ❤️ para perfumarias de todos os tamanhos</p>
+<p align="center">Desenvolvido com ❤️ para você vendendor(a) autônomo(a)</p>
