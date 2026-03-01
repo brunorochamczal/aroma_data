@@ -187,6 +187,13 @@ const Produtos = () => {
     p.marca?.toLowerCase().includes(search.toLowerCase())
   );
 
+  // Função segura para formatar preço
+  const formatPrice = (value) => {
+    if (value === null || value === undefined || value === '') return '0.00';
+    const num = parseFloat(value);
+    return isNaN(num) ? '0.00' : num.toFixed(2);
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -277,7 +284,7 @@ const Produtos = () => {
                     <div className="flex items-center gap-2 text-sm text-gray-600">
                       <span className="font-medium">Preço:</span>
                       <span className="text-emerald-600 font-bold">
-                        R$ {produto.preco_venda?.toFixed(2)}
+                        R$ {formatPrice(produto.preco_venda)}
                       </span>
                     </div>
                     <div className="flex items-center gap-2 text-sm text-gray-600">
@@ -476,5 +483,4 @@ const Produtos = () => {
   );
 };
 
-// ✅ ÚNICO EXPORT DEFAULT - NO FINAL DO ARQUIVO
 export default Produtos;
