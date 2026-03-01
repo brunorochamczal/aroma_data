@@ -14,7 +14,16 @@ import StatsCard from "@/components/dashboard/StatsCard";
 import SalesChart from "@/components/dashboard/SalesChart";
 import LowStockAlert from "@/components/dashboard/LowStockAlert";
 
-export default function Dashboard() {
+// Função segura para formatar preço
+const formatPrice = (value) => {
+  if (value === null || value === undefined || value === '') return 0;
+  const num = parseFloat(value);
+  return isNaN(num) ? 0 : num;
+};
+
+const Dashboard = () => {
+  console.log('📊 Dashboard: renderizando');
+  
   const [stats, setStats] = useState({
     totalVendas: 0,
     valorTotal: 0,
@@ -23,68 +32,83 @@ export default function Dashboard() {
   });
   const [chartData, setChartData] = useState([]);
 
+  // Buscar vendas
   const { data: vendas = [], isLoading: loadingVendas } = useQuery({
     queryKey: ['vendas'],
     queryFn: async () => {
       const response = await aroma.vendas.listar();
-      return response;
+      console.log('📦 Vendas carregadas:', response);
+      return Array.isArray(response) ? response : [];
     },
   });
 
+  // Buscar produtos
   const { data: produtos = [], isLoading: loadingProdutos } = useQuery({
     queryKey: ['produtos'],
     queryFn: async () => {
       const response = await aroma.produtos.listar();
-      return response;
+      return Array.isArray(response) ? response : [];
     },
   });
 
-  const { data: lowStockProducts = [] } = useQuery({
-    queryKey: ['produtos-low-stock'],
-    queryFn: async () => {
-      const response = await aroma.produtos.listar();
-      return response.filter(p => (p.estoque_atual || 0) <= (p.estoque_minimo || 5));
-    },
-  });
-
+  // Calcular estatísticas quando vendas mudar
   useEffect(() => {
     if (vendas.length > 0) {
-      calculateStats();
-      generateChartData();
+      calcularEstatisticas();
+      gerarDadosGrafico();
+    } else {
+      // Se não há vendas, zerar estatísticas
+      setStats({
+        totalVendas: 0,
+        valorTotal: 0,
+        lucro: 0,
+        ticketMedio: 0,
+      });
+      setChartData([]);
     }
-  }, [vendas]);
+  }, [vendas, produtos]);
 
-  const calculateStats = () => {
+  const calcularEstatisticas = () => {
     const now = new Date();
     const monthStart = startOfMonth(now);
     const monthEnd = endOfMonth(now);
 
+    // Filtrar vendas do mês atual (não canceladas)
     const vendasMes = vendas.filter(v => {
       if (v.cancelada) return false;
       const vendaDate = new Date(v.created_at);
       return vendaDate >= monthStart && vendaDate <= monthEnd;
     });
 
-    const valorTotal = vendasMes.reduce((acc, v) => acc + (v.valor_final || v.valor_total || 0), 0);
-    
+    // Calcular valor total (convertendo para número)
+    const valorTotal = vendasMes.reduce((acc, v) => {
+      const valor = formatPrice(v.valor_final || v.valor_total || 0);
+      return acc + valor;
+    }, 0);
+
     // Calcular lucro (simplificado)
     const lucro = vendasMes.reduce((acc, v) => {
+      const valorVenda = formatPrice(v.valor_final || v.valor_total || 0);
+      
+      // Calcular custo dos itens
       const custoTotal = v.itens?.reduce((sum, item) => {
         const produto = produtos.find(p => p.id === item.produto_id);
-        return sum + ((produto?.preco_custo || 0) * item.quantidade);
+        const custo = formatPrice(produto?.preco_custo || 0);
+        return sum + (custo * (item.quantidade || 0));
       }, 0) || 0;
-      return acc + ((v.valor_final || v.valor_total || 0) - custoTotal);
+
+      return acc + (valorVenda - custoTotal);
     }, 0);
 
     setStats({
       totalVendas: vendasMes.length,
-      valorTotal,
-      lucro,
+      valorTotal: valorTotal,
+      lucro: lucro,
       ticketMedio: vendasMes.length > 0 ? valorTotal / vendasMes.length : 0,
     });
   };
 
-  const generateChartData = () => {
+  const gerarDadosGrafico = () => {
     const now = new Date();
     const monthStart = startOfMonth(now);
     const monthEnd = endOfMonth(now);
@@ -97,25 +121,31 @@ export default function Dashboard() {
         const vendaDate = format(new Date(v.created_at), 'yyyy-MM-dd');
         return vendaDate === dayStr;
       });
-      const valor = dayVendas.reduce((acc, v) => acc + (v.valor_final || v.valor_total || 0), 0);
+      
+      const valor = dayVendas.reduce((acc, v) => {
+        return acc + formatPrice(v.valor_final || v.valor_total || 0);
+      }, 0);
+
       return {
         dia: format(day, 'dd/MM'),
-        valor,
+        valor: valor,
       };
     });
 
     setChartData(data);
   };
 
+  // Filtrar produtos com estoque baixo
+  const lowStockProducts = produtos.filter(p => 
+    (p.estoque_atual || 0) <= (p.estoque_minimo || 5)
+  );
+
   const isLoading = loadingVendas || loadingProdutos;
 
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
-        <div className="flex flex-col items-center gap-4">
-          <Loader2 className="h-10 w-10 animate-spin text-purple-600" />
-          <p className="text-gray-500">Carregando dashboard...</p>
-        </div>
+        <Loader2 className="h-8 w-8 animate-spin text-purple-600" />
       </div>
     );
   }
@@ -164,4 +194,6 @@ export default function Dashboard() {
       </div>
     </div>
   );
-}
+};
+
+export default Dashboard;
