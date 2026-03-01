@@ -10,6 +10,7 @@ import Relatorios from './pages/Relatorios';
 import Vendas from './pages/Vendas';
 import Teste from './pages/Teste';      // <-- ADICIONADO
 import __Layout from './Layout.jsx';
+import GerenciarUsuarios from './pages/GerenciarUsuarios';
 
 // LOG DETALHADO
 console.log('📦 Importação de páginas:');
@@ -30,6 +31,7 @@ const PAGES = {
     "Produtos": Produtos,
     "Relatorios": Relatorios,
     "Vendas": Vendas,
+     "GerenciarUsuarios": GerenciarUsuarios,
 };
 
 export const pagesConfig = {
