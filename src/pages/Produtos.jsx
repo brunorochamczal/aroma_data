@@ -3,7 +3,7 @@ import { aroma } from "@/api/aromaClient";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { 
   Plus, Search, Edit2, Trash2, Package, 
-  Loader2, MoreVertical, PackagePlus, AlertTriangle
+  Loader2, MoreVertical, AlertTriangle, CheckCircle
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,6 +14,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogFooter,
 } from "@/components/ui/dialog";
 import {
   DropdownMenu,
@@ -34,10 +35,7 @@ import { toast } from "sonner";
 export default function Produtos() {
   const [search, setSearch] = useState("");
   const [showForm, setShowForm] = useState(false);
-  const [showEstoqueForm, setShowEstoqueForm] = useState(false);
   const [editingProduto, setEditingProduto] = useState(null);
-  const [selectedProduto, setSelectedProduto] = useState(null);
-  const [estoqueQuantidade, setEstoqueQuantidade] = useState("");
   const [formData, setFormData] = useState({
     nome: "",
     marca: "",
@@ -48,6 +46,11 @@ export default function Produtos() {
     estoque_minimo: 5,
     fornecedor_id: "",
   });
+  
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [successMessage, setSuccessMessage] = useState("");
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [itemToDelete, setItemToDelete] = useState(null);
 
   const queryClient = useQueryClient();
 
@@ -55,7 +58,7 @@ export default function Produtos() {
     queryKey: ['produtos'],
     queryFn: async () => {
       const response = await aroma.produtos.listar();
-      return response.sort((a, b) => new Date(b.created_date) - new Date(a.created_date));
+      return response.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
     },
   });
 
@@ -63,7 +66,7 @@ export default function Produtos() {
     queryKey: ['fornecedores'],
     queryFn: async () => {
       const response = await aroma.fornecedores.listar();
-      return response.filter(f => f.ativo !== false);
+      return response;
     },
   });
 
@@ -73,8 +76,13 @@ export default function Produtos() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['produtos'] });
-      toast.success("Produto cadastrado com sucesso!");
+      setSuccessMessage("Produto cadastrado com sucesso!");
+      setShowSuccessModal(true);
       resetForm();
+    },
+    onError: (error) => {
+      toast.error(error.message || "Erro ao cadastrar produto");
+      console.error(error);
     },
   });
 
@@ -84,39 +92,27 @@ export default function Produtos() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['produtos'] });
-      toast.success("Produto atualizado com sucesso!");
+      setSuccessMessage("Produto atualizado com sucesso!");
+      setShowSuccessModal(true);
       resetForm();
+    },
+    onError: (error) => {
+      toast.error(error.message || "Erro ao atualizar produto");
+      console.error(error);
     },
   });
 
   const deleteMutation = useMutation({
     mutationFn: async (id) => {
-      return await aroma.produtos.desativar(id);
+      return await aroma.produtos.excluir(id);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['produtos'] });
-      toast.success("Produto desativado com sucesso!");
+      toast.success("Produto excluído permanentemente!");
     },
-  });
-
-  const addEstoqueMutation = useMutation({
-    mutationFn: async ({ produto, quantidade }) => {
-      const novoEstoque = (produto.estoque_atual || 0) + quantidade;
-      await aroma.produtos.atualizar(produto.id, { estoque_atual: novoEstoque });
-      await aroma.movimentacoes.criar({
-        produto_id: produto.id,
-        produto_nome: produto.nome,
-        tipo: "ENTRADA",
-        quantidade,
-        motivo: "COMPRA",
-      });
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['produtos'] });
-      toast.success("Estoque atualizado com sucesso!");
-      setShowEstoqueForm(false);
-      setSelectedProduto(null);
-      setEstoqueQuantidade("");
+    onError: (error) => {
+      toast.error(error.message || "Erro ao excluir produto");
+      console.error(error);
     },
   });
 
@@ -143,7 +139,6 @@ export default function Produtos() {
       preco_venda: parseFloat(formData.preco_venda) || 0,
       estoque_atual: parseInt(formData.estoque_atual) || 0,
       estoque_minimo: parseInt(formData.estoque_minimo) || 5,
-      ativo: true,
     };
     
     if (data.preco_venda <= data.preco_custo) {
@@ -173,15 +168,22 @@ export default function Produtos() {
     setShowForm(true);
   };
 
-  const handleAddEstoque = (produto) => {
-    setSelectedProduto(produto);
-    setShowEstoqueForm(true);
+  const handleDeleteClick = (id) => {
+    setItemToDelete(id);
+    setShowDeleteConfirm(true);
+  };
+
+  const confirmDelete = () => {
+    if (itemToDelete) {
+      deleteMutation.mutate(itemToDelete);
+      setShowDeleteConfirm(false);
+      setItemToDelete(null);
+    }
   };
 
   const filteredProdutos = produtos.filter(p => 
-    p.ativo !== false && 
-    (p.nome?.toLowerCase().includes(search.toLowerCase()) ||
-     p.marca?.toLowerCase().includes(search.toLowerCase()))
+    p.nome?.toLowerCase().includes(search.toLowerCase()) ||
+    p.marca?.toLowerCase().includes(search.toLowerCase())
   );
 
   return (
@@ -249,20 +251,16 @@ export default function Produtos() {
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => handleAddEstoque(produto)}>
-                          <PackagePlus className="h-4 w-4 mr-2" />
-                          Entrada de Estoque
-                        </DropdownMenuItem>
                         <DropdownMenuItem onClick={() => handleEdit(produto)}>
                           <Edit2 className="h-4 w-4 mr-2" />
                           Editar
                         </DropdownMenuItem>
                         <DropdownMenuItem 
-                          onClick={() => deleteMutation.mutate(produto.id)}
+                          onClick={() => handleDeleteClick(produto.id)}
                           className="text-red-600"
                         >
                           <Trash2 className="h-4 w-4 mr-2" />
-                          Desativar
+                          Excluir
                         </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
@@ -303,6 +301,67 @@ export default function Produtos() {
           })}
         </div>
       )}
+
+      {/* Modal de Sucesso */}
+      <Dialog open={showSuccessModal} onOpenChange={setShowSuccessModal}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-center text-emerald-600 flex items-center justify-center gap-2">
+              <CheckCircle className="h-6 w-6" />
+              Sucesso!
+            </DialogTitle>
+          </DialogHeader>
+          <div className="text-center py-4">
+            <p className="text-gray-600">{successMessage}</p>
+          </div>
+          <DialogFooter>
+            <Button 
+              onClick={() => setShowSuccessModal(false)} 
+              className="w-full bg-gradient-to-r from-emerald-500 to-teal-500"
+            >
+              OK
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal de Confirmação de Exclusão */}
+      <Dialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-center text-red-600">
+              ⚠️ Confirmar Exclusão
+            </DialogTitle>
+          </DialogHeader>
+          <div className="text-center py-4">
+            <p className="text-gray-600 mb-2">
+              Tem certeza que deseja excluir permanentemente?
+            </p>
+            <p className="text-sm text-red-500">
+              Esta ação não pode ser desfeita!
+            </p>
+          </div>
+          <DialogFooter className="flex gap-2">
+            <Button 
+              variant="outline" 
+              onClick={() => setShowDeleteConfirm(false)}
+              className="flex-1"
+            >
+              Cancelar
+            </Button>
+            <Button 
+              onClick={confirmDelete}
+              className="flex-1 bg-red-600 hover:bg-red-700"
+              disabled={deleteMutation.isPending}
+            >
+              {deleteMutation.isPending ? (
+                <Loader2 className="h-4 w-4 animate-spin mr-2" />
+              ) : null}
+              Sim, Excluir
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Form Dialog */}
       <Dialog open={showForm} onOpenChange={(open) => !open && resetForm()}>
@@ -368,7 +427,7 @@ export default function Produtos() {
                   id="estoque_atual"
                   type="number"
                   value={formData.estoque_atual}
-                  onChange={(e) => setFormData({ ...formData, estoque_atual: parseInt(e.target.value) || 0 })}
+                  onChange={(e) => setFormData({ ...formData, estoque_atual: e.target.value })}
                 />
               </div>
               <div className="space-y-2">
@@ -377,7 +436,7 @@ export default function Produtos() {
                   id="estoque_minimo"
                   type="number"
                   value={formData.estoque_minimo}
-                  onChange={(e) => setFormData({ ...formData, estoque_minimo: parseInt(e.target.value) || 5 })}
+                  onChange={(e) => setFormData({ ...formData, estoque_minimo: e.target.value })}
                 />
               </div>
               <div className="space-y-2 col-span-2">
@@ -413,57 +472,6 @@ export default function Produtos() {
               </Button>
             </div>
           </form>
-        </DialogContent>
-      </Dialog>
-
-      {/* Estoque Dialog */}
-      <Dialog open={showEstoqueForm} onOpenChange={setShowEstoqueForm}>
-        <DialogContent className="sm:max-w-sm">
-          <DialogHeader>
-            <DialogTitle>Entrada de Estoque</DialogTitle>
-          </DialogHeader>
-          {selectedProduto && (
-            <div className="space-y-4">
-              <div className="p-4 bg-purple-50 rounded-lg">
-                <p className="font-semibold text-gray-900">{selectedProduto.nome}</p>
-                <p className="text-sm text-gray-500">Estoque atual: {selectedProduto.estoque_atual || 0} unidades</p>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="quantidade">Quantidade a adicionar</Label>
-                <Input 
-                  id="quantidade"
-                  type="number"
-                  min="1"
-                  value={estoqueQuantidade}
-                  onChange={(e) => setEstoqueQuantidade(e.target.value)}
-                  placeholder="0"
-                />
-              </div>
-              <div className="flex gap-3">
-                <Button 
-                  type="button" 
-                  variant="outline" 
-                  onClick={() => setShowEstoqueForm(false)} 
-                  className="flex-1"
-                >
-                  Cancelar
-                </Button>
-                <Button 
-                  onClick={() => addEstoqueMutation.mutate({ 
-                    produto: selectedProduto, 
-                    quantidade: parseInt(estoqueQuantidade) || 0 
-                  })}
-                  className="flex-1 bg-gradient-to-r from-purple-600 to-violet-600"
-                  disabled={!estoqueQuantidade || addEstoqueMutation.isPending}
-                >
-                  {addEstoqueMutation.isPending && (
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  )}
-                  Confirmar
-                </Button>
-              </div>
-            </div>
-          )}
         </DialogContent>
       </Dialog>
     </div>
