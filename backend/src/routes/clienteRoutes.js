@@ -4,21 +4,21 @@ import { Cliente } from '../models/Cliente.js';
 
 const router = express.Router();
 
-// Todas as rotas de cliente exigem autenticação
+// Todas as rotas exigem autenticação
 router.use(authenticate);
 
-// Listar clientes
+// LISTAR
 router.get('/', async (req, res) => {
   try {
     const clientes = await Cliente.findAll();
     res.json(clientes);
   } catch (error) {
-    console.error('Erro ao listar clientes:', error);
+    console.error('❌ Erro ao listar clientes:', error);
     res.status(500).json({ error: error.message });
   }
 });
 
-// Criar cliente
+// CRIAR
 router.post('/', async (req, res) => {
   try {
     const cliente = await Cliente.create({
@@ -27,12 +27,12 @@ router.post('/', async (req, res) => {
     });
     res.status(201).json(cliente);
   } catch (error) {
-    console.error('Erro ao criar cliente:', error);
+    console.error('❌ Erro ao criar cliente:', error);
     res.status(500).json({ error: error.message });
   }
 });
 
-// Buscar cliente por ID
+// BUSCAR por ID
 router.get('/:id', async (req, res) => {
   try {
     const cliente = await Cliente.findById(req.params.id);
@@ -41,12 +41,12 @@ router.get('/:id', async (req, res) => {
     }
     res.json(cliente);
   } catch (error) {
-    console.error('Erro ao buscar cliente:', error);
+    console.error('❌ Erro ao buscar cliente:', error);
     res.status(500).json({ error: error.message });
   }
 });
 
-// Atualizar cliente
+// ATUALIZAR
 router.put('/:id', async (req, res) => {
   try {
     const cliente = await Cliente.update(req.params.id, req.body);
@@ -55,21 +55,24 @@ router.put('/:id', async (req, res) => {
     }
     res.json(cliente);
   } catch (error) {
-    console.error('Erro ao atualizar cliente:', error);
+    console.error('❌ Erro ao atualizar cliente:', error);
     res.status(500).json({ error: error.message });
   }
 });
 
-// Desativar cliente
+// EXCLUIR (DELETE REAL)
 router.delete('/:id', async (req, res) => {
   try {
     const cliente = await Cliente.delete(req.params.id);
     if (!cliente) {
       return res.status(404).json({ error: 'Cliente não encontrado' });
     }
-    res.json({ message: 'Cliente desativado com sucesso' });
+    res.json({ 
+      success: true,
+      message: 'Cliente excluído permanentemente com sucesso' 
+    });
   } catch (error) {
-    console.error('Erro ao desativar cliente:', error);
+    console.error('❌ Erro ao excluir cliente:', error);
     res.status(500).json({ error: error.message });
   }
 });
