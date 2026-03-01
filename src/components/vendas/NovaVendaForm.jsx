@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { aroma } from "@/api/aromaClient";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
@@ -16,12 +16,13 @@ import {
 import { toast } from "sonner";
 
 const NovaVendaForm = ({ onSuccess, onCancel }) => {
-  const [clienteId, setClienteId] = useState("cliente_avulso"); // MUDANÇA: valor padrão não vazio
+  const [clienteId, setClienteId] = useState("cliente_avulso");
   const [clienteNome, setClienteNome] = useState("");
   const [itens, setItens] = useState([]);
   const [produtoSelecionado, setProdutoSelecionado] = useState("");
   const [quantidade, setQuantidade] = useState(1);
   const [searchTerm, setSearchTerm] = useState("");
+  const [produtosFiltrados, setProdutosFiltrados] = useState([]);
 
   // Buscar produtos
   const { data: produtos = [], isLoading: loadingProdutos } = useQuery({
@@ -41,6 +42,19 @@ const NovaVendaForm = ({ onSuccess, onCancel }) => {
       return Array.isArray(response) ? response : [];
     },
   });
+
+  // Efeito para filtrar produtos quando searchTerm ou produtos mudam
+  useEffect(() => {
+    if (!searchTerm.trim()) {
+      setProdutosFiltrados(produtos);
+    } else {
+      const filtered = produtos.filter(p => 
+        p.nome?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        p.marca?.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+      setProdutosFiltrados(filtered);
+    }
+  }, [searchTerm, produtos]);
 
   const criarVendaMutation = useMutation({
     mutationFn: async (dados) => {
@@ -136,11 +150,6 @@ const NovaVendaForm = ({ onSuccess, onCancel }) => {
     criarVendaMutation.mutate(vendaData);
   };
 
-  const filteredProdutos = produtos.filter(p => 
-    p.nome?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    p.marca?.toLowerCase().includes(searchTerm.toLowerCase())
-  );
-
   if (loadingProdutos) {
     return (
       <div className="flex justify-center py-8">
@@ -155,8 +164,11 @@ const NovaVendaForm = ({ onSuccess, onCancel }) => {
       <div className="space-y-2">
         <Label htmlFor="cliente">Cliente</Label>
         <Select value={clienteId} onValueChange={setClienteId}>
-          <SelectTrigger>
-            <SelectValue placeholder="Selecione um cliente" />
+          <SelectTrigger className="w-full">
+            <SelectValue placeholder="Selecione um cliente">
+              {clienteId === "cliente_avulso" ? "Venda Avulsa" : 
+               clientes.find(c => c.id === clienteId)?.nome || "Selecione um cliente"}
+            </SelectValue>
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="cliente_avulso">Venda Avulsa</SelectItem>
@@ -168,15 +180,15 @@ const NovaVendaForm = ({ onSuccess, onCancel }) => {
           </SelectContent>
         </Select>
         
-        {/* Cliente não cadastrado - só aparece se "Venda Avulsa" estiver selecionado */}
+        {/* Campo para cliente não cadastrado */}
         {clienteId === "cliente_avulso" && (
           <div className="mt-2">
-            <Label htmlFor="cliente_nome">Ou digite o nome do cliente (não cadastrado)</Label>
+            <Label htmlFor="cliente_nome">Nome do cliente (não cadastrado)</Label>
             <Input
               id="cliente_nome"
               value={clienteNome}
               onChange={(e) => setClienteNome(e.target.value)}
-              placeholder="Nome do cliente"
+              placeholder="Digite o nome do cliente"
               className="mt-1"
             />
           </div>
@@ -184,14 +196,22 @@ const NovaVendaForm = ({ onSuccess, onCancel }) => {
       </div>
 
       {/* Busca de Produtos */}
-      <div className="relative">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-        <Input
-          placeholder="Buscar produtos..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          className="pl-10"
-        />
+      <div className="space-y-2">
+        <Label>Buscar Produtos</Label>
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+          <Input
+            placeholder="Digite para buscar produtos..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="pl-10"
+          />
+        </div>
+        {searchTerm && produtosFiltrados.length === 0 && (
+          <p className="text-sm text-amber-600 mt-1">
+            Nenhum produto encontrado com "{searchTerm}"
+          </p>
+        )}
       </div>
 
       {/* Adicionar Itens */}
@@ -209,9 +229,11 @@ const NovaVendaForm = ({ onSuccess, onCancel }) => {
                   <SelectValue placeholder="Selecione um produto" />
                 </SelectTrigger>
                 <SelectContent>
-                  {filteredProdutos.map((produto) => (
+                  {produtosFiltrados.map((produto) => (
                     <SelectItem key={produto.id} value={produto.id}>
-                      {produto.nome} - R$ {formatPrice(produto.preco_venda)} (Estoque: {produto.estoque_atual || 0})
+                      {produto.nome} - R$ {formatPrice(produto.preco_venda)} 
+                      {produto.marca && ` (${produto.marca})`}
+                      {produto.estoque_atual > 0 && ` - Estoque: ${produto.estoque_atual}`}
                     </SelectItem>
                   ))}
                 </SelectContent>
