@@ -297,4 +297,13 @@ router.get('/me', async (req, res) => {
   }
 });
 
+
+// ROTA TEMPORÁRIA PARA GERAR HASH (REMOVER DEPOIS)
+router.post('/gerar-hash', async (req, res) => {
+  const { senha } = req.body;
+  const bcrypt = require('bcryptjs');
+  const hash = await bcrypt.hash(senha, 10);
+  res.json({ senha, hash });
+});
+
 export default router;
