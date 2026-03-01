@@ -24,14 +24,6 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import { toast } from "sonner";
 import NovaVendaForm from "@/components/vendas/NovaVendaForm";
 import VendaDetalhe from "@/components/vendas/VendaDetalhe";
@@ -48,11 +40,14 @@ const Vendas = () => {
 
   const queryClient = useQueryClient();
 
+  // GARANTIR QUE VENDAS É SEMPRE UM ARRAY
   const { data: vendas = [], isLoading } = useQuery({
     queryKey: ['vendas'],
     queryFn: async () => {
       const response = await aroma.vendas.listar();
-      return response.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+      // Garantir que é array
+      const vendasArray = Array.isArray(response) ? response : [];
+      return vendasArray.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
     },
   });
 
@@ -90,10 +85,11 @@ const Vendas = () => {
     return isNaN(num) ? '0.00' : num.toFixed(2);
   };
 
-  const filteredVendas = vendas.filter(v => 
-    v.cliente_nome?.toLowerCase().includes(search.toLowerCase()) ||
-    v.id?.toString().includes(search)
-  );
+  // Garantir que filteredVendas é array
+  const filteredVendas = Array.isArray(vendas) ? vendas.filter(v => 
+    v?.cliente_nome?.toLowerCase().includes(search.toLowerCase()) ||
+    v?.id?.toString().includes(search)
+  ) : [];
 
   return (
     <div className="space-y-6">
@@ -279,16 +275,18 @@ const Vendas = () => {
           <DialogHeader>
             <DialogTitle>Nova Venda</DialogTitle>
           </DialogHeader>
-          <NovaVendaForm 
-            onSuccess={() => {
-              setShowNovaVenda(false);
-              setSuccessMessage("Venda realizada com sucesso!");
-              setShowSuccessModal(true);
-              queryClient.invalidateQueries({ queryKey: ['vendas'] });
-              queryClient.invalidateQueries({ queryKey: ['produtos'] });
-            }}
-            onCancel={() => setShowNovaVenda(false)}
-          />
+          {showNovaVenda && (
+            <NovaVendaForm 
+              onSuccess={() => {
+                setShowNovaVenda(false);
+                setSuccessMessage("Venda realizada com sucesso!");
+                setShowSuccessModal(true);
+                queryClient.invalidateQueries({ queryKey: ['vendas'] });
+                queryClient.invalidateQueries({ queryKey: ['produtos'] });
+              }}
+              onCancel={() => setShowNovaVenda(false)}
+            />
+          )}
         </DialogContent>
       </Dialog>
 
