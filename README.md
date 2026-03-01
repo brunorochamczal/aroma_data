@@ -1,6 +1,8 @@
 # Aroma Data - Sistema de Gestão de Perfumaria
 
-![Dashboard](./aroma.png)
+<p align="center">
+  <img src="./aroma.png" alt="Dashboard" width="600"/>
+</p>
 
 ## 🚀 **Sistema Completo de Gestão para Perfumarias**
 
