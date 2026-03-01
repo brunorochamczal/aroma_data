@@ -221,7 +221,8 @@ excluir: async (id) => {
       return apiRequest(`/vendas/${id}`);
     },
 
-    criar: async (dados) => {  // <-- ADICIONADO
+    criar: async (dados) => {
+      console.log('📤 Chamando API de criar venda:', dados);
       return apiRequest('/vendas', {
         method: 'POST',
         body: JSON.stringify(dados)
