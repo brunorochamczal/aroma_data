@@ -53,7 +53,7 @@ router.post('/register',
         { 
           userId: user.id, 
           email: user.email,
-          isAdmin 
+          isAdmin: email === 'admin@aromadata.com' 
         },
         process.env.JWT_SECRET,
         { expiresIn: '7d' }
