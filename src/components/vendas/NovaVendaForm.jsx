@@ -1,25 +1,36 @@
 import React, { useState } from "react";
-import { aroma } from "@/api/aromaClient";  // ← IMPORT CORRIGIDO
+import { aroma } from "@/api/aromaClient";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
-import { Loader2, Plus, Trash2 } from "lucide-react";
+import { Loader2, Plus, Trash2, Search } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { toast } from "sonner";
 
-export default function NovaVendaForm({ onSuccess, onCancel }) {
+const NovaVendaForm = ({ onSuccess, onCancel }) => {
   const [clienteId, setClienteId] = useState("");
+  const [clienteNome, setClienteNome] = useState("");
   const [itens, setItens] = useState([]);
   const [produtoSelecionado, setProdutoSelecionado] = useState("");
   const [quantidade, setQuantidade] = useState(1);
+  const [searchTerm, setSearchTerm] = useState("");
 
-  // Buscar produtos disponíveis
+  // Buscar produtos
   const { data: produtos = [], isLoading: loadingProdutos } = useQuery({
     queryKey: ['produtos-venda'],
     queryFn: async () => {
-      const response = await aroma.produtos.listar();  // ← USO CORRIGIDO
-      return response.filter(p => p.ativo !== false && (p.estoque_atual || 0) > 0);
+      const response = await aroma.produtos.listar();
+      // Garantir que é array e filtrar apenas com estoque
+      const produtosArray = Array.isArray(response) ? response : [];
+      return produtosArray.filter(p => p?.ativo !== false && (p?.estoque_atual || 0) > 0);
     },
   });
 
@@ -27,39 +38,66 @@ export default function NovaVendaForm({ onSuccess, onCancel }) {
   const { data: clientes = [] } = useQuery({
     queryKey: ['clientes-venda'],
     queryFn: async () => {
-      const response = await aroma.clientes.listar();  // ← USO CORRIGIDO
-      return response.filter(c => c.ativo !== false);
+      const response = await aroma.clientes.listar();
+      return Array.isArray(response) ? response : [];
     },
   });
 
   const criarVendaMutation = useMutation({
     mutationFn: async (dados) => {
-      return await aroma.vendas.criar(dados);  // ← USO CORRIGIDO
+      return await aroma.vendas.criar(dados);
     },
     onSuccess: () => {
       toast.success("Venda registrada com sucesso!");
       onSuccess();
     },
     onError: (error) => {
-      toast.error("Erro ao registrar venda");
+      toast.error(error.message || "Erro ao registrar venda");
       console.error(error);
     },
   });
 
+  // Função segura para formatar preço
+  const formatPrice = (value) => {
+    if (value === null || value === undefined || value === '') return '0.00';
+    const num = parseFloat(value);
+    return isNaN(num) ? '0.00' : num.toFixed(2);
+  };
+
   const adicionarItem = () => {
+    if (!produtoSelecionado) {
+      toast.error("Selecione um produto");
+      return;
+    }
+
+    if (!quantidade || quantidade < 1) {
+      toast.error("Quantidade inválida");
+      return;
+    }
+
     const produto = produtos.find(p => p.id === produtoSelecionado);
     if (!produto) return;
+
+    // Verificar estoque
+    if ((produto.estoque_atual || 0) < quantidade) {
+      toast.error(`Estoque insuficiente. Disponível: ${produto.estoque_atual || 0}`);
+      return;
+    }
+
+    const precoUnitario = parseFloat(produto.preco_venda) || 0;
+    const subtotal = precoUnitario * parseInt(quantidade);
 
     setItens([...itens, {
       produto_id: produto.id,
       produto_nome: produto.nome,
       quantidade: parseInt(quantidade),
-      preco_unitario: produto.preco_venda,
-      subtotal: produto.preco_venda * parseInt(quantidade)
+      preco_unitario: precoUnitario,
+      subtotal: subtotal
     }]);
 
     setProdutoSelecionado("");
     setQuantidade(1);
+    setSearchTerm("");
   };
 
   const removerItem = (index) => {
@@ -74,17 +112,30 @@ export default function NovaVendaForm({ onSuccess, onCancel }) {
       return;
     }
 
-    const valorTotal = itens.reduce((acc, item) => acc + item.subtotal, 0);
+    const valorTotal = itens.reduce((acc, item) => acc + (item.subtotal || 0), 0);
+    const clienteSelecionado = clientes.find(c => c.id === clienteId);
 
-    criarVendaMutation.mutate({
+    const vendaData = {
       cliente_id: clienteId || null,
-      cliente_nome: clientes.find(c => c.id === clienteId)?.nome || "Venda Avulsa",
-      itens,
-      valor_total: valorTotal,
-      valor_final: valorTotal,
-      created_date: new Date().toISOString(),
-    });
+      cliente_nome: clienteSelecionado?.nome || clienteNome || "Venda Avulsa",
+      itens: itens.map(item => ({
+        ...item,
+        preco_unitario: parseFloat(item.preco_unitario) || 0,
+        subtotal: parseFloat(item.subtotal) || 0
+      })),
+      valor_total: parseFloat(valorTotal) || 0,
+      valor_final: parseFloat(valorTotal) || 0,
+      created_at: new Date().toISOString(),
+    };
+
+    criarVendaMutation.mutate(vendaData);
   };
+
+  // Filtrar produtos baseado na busca
+  const filteredProdutos = produtos.filter(p => 
+    p.nome?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    p.marca?.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
   if (loadingProdutos) {
     return (
@@ -99,40 +150,68 @@ export default function NovaVendaForm({ onSuccess, onCancel }) {
       {/* Seleção de Cliente */}
       <div className="space-y-2">
         <Label htmlFor="cliente">Cliente</Label>
-        <select
-          id="cliente"
-          value={clienteId}
-          onChange={(e) => setClienteId(e.target.value)}
-          className="w-full p-2 border rounded-md"
-        >
-          <option value="">Venda Avulsa</option>
-          {clientes.map((cliente) => (
-            <option key={cliente.id} value={cliente.id}>
-              {cliente.nome}
-            </option>
-          ))}
-        </select>
+        <Select value={clienteId} onValueChange={setClienteId}>
+          <SelectTrigger>
+            <SelectValue placeholder="Selecione um cliente ou digite abaixo" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="">Venda Avulsa</SelectItem>
+            {clientes.map((cliente) => (
+              <SelectItem key={cliente.id} value={cliente.id}>
+                {cliente.nome}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        
+        {/* Cliente não cadastrado */}
+        {!clienteId && (
+          <div className="mt-2">
+            <Label htmlFor="cliente_nome">Ou digite o nome do cliente</Label>
+            <Input
+              id="cliente_nome"
+              value={clienteNome}
+              onChange={(e) => setClienteNome(e.target.value)}
+              placeholder="Nome do cliente não cadastrado"
+              className="mt-1"
+            />
+          </div>
+        )}
+      </div>
+
+      {/* Busca de Produtos */}
+      <div className="relative">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+        <Input
+          placeholder="Buscar produtos..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          className="pl-10"
+        />
       </div>
 
       {/* Adicionar Itens */}
       <Card>
         <CardContent className="pt-6">
           <h3 className="font-semibold mb-4">Adicionar Itens</h3>
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="col-span-1">
               <Label>Produto</Label>
-              <select
+              <Select
                 value={produtoSelecionado}
-                onChange={(e) => setProdutoSelecionado(e.target.value)}
-                className="w-full p-2 border rounded-md"
+                onValueChange={setProdutoSelecionado}
               >
-                <option value="">Selecione...</option>
-                {produtos.map((produto) => (
-                  <option key={produto.id} value={produto.id}>
-                    {produto.nome} - R$ {produto.preco_venda?.toFixed(2)} (Estoque: {produto.estoque_atual})
-                  </option>
-                ))}
-              </select>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {filteredProdutos.map((produto) => (
+                    <SelectItem key={produto.id} value={produto.id}>
+                      {produto.nome} - R$ {formatPrice(produto.preco_venda)} (Estoque: {produto.estoque_atual || 0})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
             <div className="col-span-1">
               <Label>Quantidade</Label>
@@ -140,7 +219,7 @@ export default function NovaVendaForm({ onSuccess, onCancel }) {
                 type="number"
                 min="1"
                 value={quantidade}
-                onChange={(e) => setQuantidade(e.target.value)}
+                onChange={(e) => setQuantidade(parseInt(e.target.value) || 1)}
                 disabled={!produtoSelecionado}
               />
             </div>
@@ -149,7 +228,7 @@ export default function NovaVendaForm({ onSuccess, onCancel }) {
                 type="button"
                 onClick={adicionarItem}
                 disabled={!produtoSelecionado}
-                className="w-full"
+                className="w-full bg-gradient-to-r from-purple-600 to-violet-600"
               >
                 <Plus className="h-4 w-4 mr-2" />
                 Adicionar
@@ -166,11 +245,11 @@ export default function NovaVendaForm({ onSuccess, onCancel }) {
             <h3 className="font-semibold mb-4">Itens da Venda</h3>
             <div className="space-y-2">
               {itens.map((item, index) => (
-                <div key={index} className="flex items-center justify-between p-2 bg-gray-50 rounded">
-                  <div>
+                <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                  <div className="flex-1">
                     <p className="font-medium">{item.produto_nome}</p>
                     <p className="text-sm text-gray-500">
-                      {item.quantidade} x R$ {item.preco_unitario.toFixed(2)} = R$ {item.subtotal.toFixed(2)}
+                      {item.quantidade} x R$ {formatPrice(item.preco_unitario)} = R$ {formatPrice(item.subtotal)}
                     </p>
                   </div>
                   <Button
@@ -178,8 +257,9 @@ export default function NovaVendaForm({ onSuccess, onCancel }) {
                     variant="ghost"
                     size="icon"
                     onClick={() => removerItem(index)}
+                    className="text-red-500 hover:text-red-700"
                   >
-                    <Trash2 className="h-4 w-4 text-red-500" />
+                    <Trash2 className="h-4 w-4" />
                   </Button>
                 </div>
               ))}
@@ -188,7 +268,9 @@ export default function NovaVendaForm({ onSuccess, onCancel }) {
             <div className="mt-4 pt-4 border-t">
               <div className="flex justify-between font-bold">
                 <span>Total:</span>
-                <span>R$ {itens.reduce((acc, item) => acc + item.subtotal, 0).toFixed(2)}</span>
+                <span className="text-emerald-600">
+                  R$ {formatPrice(itens.reduce((acc, item) => acc + (item.subtotal || 0), 0))}
+                </span>
               </div>
             </div>
           </CardContent>
@@ -213,4 +295,6 @@ export default function NovaVendaForm({ onSuccess, onCancel }) {
       </div>
     </form>
   );
-}
+};
+
+export default NovaVendaForm;
