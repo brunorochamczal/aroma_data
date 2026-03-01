@@ -4,12 +4,11 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent } from "@/components/ui/card";
 import { Loader2, Plus, Trash2, Search, User } from "lucide-react";
 import { toast } from "sonner";
 
 const NovaVendaForm = ({ onSuccess, onCancel }) => {
-  // Estados para cliente (MESMO PADRÃO DOS PRODUTOS)
+  // Estados para cliente
   const [clienteSearchText, setClienteSearchText] = useState("");
   const [clientesVisiveis, setClientesVisiveis] = useState([]);
   const [clienteSelecionado, setClienteSelecionado] = useState(null);
@@ -27,6 +26,7 @@ const NovaVendaForm = ({ onSuccess, onCancel }) => {
     queryKey: ['produtos'],
     queryFn: async () => {
       const response = await aroma.produtos.listar();
+      console.log('📦 Produtos carregados:', response);
       return Array.isArray(response) ? response : [];
     },
   });
@@ -36,11 +36,12 @@ const NovaVendaForm = ({ onSuccess, onCancel }) => {
     queryKey: ['clientes'],
     queryFn: async () => {
       const response = await aroma.clientes.listar();
+      console.log('👥 Clientes carregados:', response);
       return Array.isArray(response) ? response : [];
     },
   });
 
-  // Efeito para filtrar clientes (MESMO PADRÃO DOS PRODUTOS)
+  // Efeito para filtrar clientes
   useEffect(() => {
     if (!clienteSearchText.trim()) {
       setClientesVisiveis([]);
@@ -71,13 +72,18 @@ const NovaVendaForm = ({ onSuccess, onCancel }) => {
 
   const criarVendaMutation = useMutation({
     mutationFn: async (dados) => {
-      return await aroma.vendas.criar(dados);
+      console.log('📤 Enviando venda:', dados);
+      const response = await aroma.vendas.criar(dados);
+      console.log('📥 Resposta da venda:', response);
+      return response;
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
+      console.log('✅ Venda criada com sucesso:', data);
       toast.success("Venda realizada com sucesso!");
       onSuccess();
     },
     onError: (error) => {
+      console.error('❌ Erro ao criar venda:', error);
       toast.error(error.message || "Erro ao registrar venda");
     },
   });
@@ -103,14 +109,17 @@ const NovaVendaForm = ({ onSuccess, onCancel }) => {
       return;
     }
 
+    const precoUnitario = parseFloat(produtoSelecionado.preco_venda) || 0;
+    
     const novoItem = {
       produto_id: produtoSelecionado.id,
       produto_nome: produtoSelecionado.nome,
-      quantidade: quantidade,
-      preco_unitario: parseFloat(produtoSelecionado.preco_venda) || 0,
-      subtotal: (parseFloat(produtoSelecionado.preco_venda) || 0) * quantidade
+      quantidade: parseInt(quantidade),
+      preco_unitario: precoUnitario,
+      subtotal: precoUnitario * parseInt(quantidade)
     };
 
+    console.log('➕ Item adicionado:', novoItem);
     setItens([...itens, novoItem]);
     setProdutoSelecionado(null);
     setQuantidade(1);
@@ -122,7 +131,7 @@ const NovaVendaForm = ({ onSuccess, onCancel }) => {
   };
 
   const calcularTotal = () => {
-    return itens.reduce((acc, item) => acc + item.subtotal, 0);
+    return itens.reduce((acc, item) => acc + (item.subtotal || 0), 0);
   };
 
   const selecionarCliente = (cliente) => {
@@ -137,7 +146,7 @@ const NovaVendaForm = ({ onSuccess, onCancel }) => {
     setClienteSearchText("");
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
 
     if (itens.length === 0) {
@@ -146,20 +155,34 @@ const NovaVendaForm = ({ onSuccess, onCancel }) => {
     }
 
     let nomeCliente = "Venda Avulsa";
+    let clienteId = null;
+
     if (clienteSelecionado) {
       nomeCliente = clienteSelecionado.nome;
+      clienteId = clienteSelecionado.id;
     } else if (clienteNomeAvulso.trim()) {
       nomeCliente = clienteNomeAvulso.trim();
     }
 
+    const valorTotal = calcularTotal();
+
     const vendaData = {
-      cliente_id: clienteSelecionado?.id || null,
+      cliente_id: clienteId,
       cliente_nome: nomeCliente,
-      itens: itens,
-      valor_total: calcularTotal(),
-      valor_final: calcularTotal(),
+      itens: itens.map(item => ({
+        produto_id: item.produto_id,
+        produto_nome: item.produto_nome,
+        quantidade: item.quantidade,
+        preco_unitario: item.preco_unitario,
+        subtotal: item.subtotal
+      })),
+      valor_total: valorTotal,
+      valor_final: valorTotal,
+      desconto: 0,
+      observacoes: ""
     };
 
+    console.log('🚀 Enviando venda:', vendaData);
     criarVendaMutation.mutate(vendaData);
   };
 
@@ -173,7 +196,7 @@ const NovaVendaForm = ({ onSuccess, onCancel }) => {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
-      {/* SEÇÃO CLIENTE - IGUAL AOS PRODUTOS */}
+      {/* SEÇÃO CLIENTE */}
       <div className="space-y-4">
         <Label className="text-lg font-semibold flex items-center gap-2">
           <User className="h-5 w-5 text-purple-600" />
@@ -201,7 +224,6 @@ const NovaVendaForm = ({ onSuccess, onCancel }) => {
                     <div className="text-sm text-gray-500">
                       {cliente.email && <span>{cliente.email} • </span>}
                       {cliente.telefone && <span>{cliente.telefone}</span>}
-                      {cliente.cpf && <span className="ml-2">CPF: {cliente.cpf}</span>}
                     </div>
                   </div>
                 ))}
