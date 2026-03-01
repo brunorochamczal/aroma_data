@@ -16,7 +16,7 @@ import {
 import { toast } from "sonner";
 
 const NovaVendaForm = ({ onSuccess, onCancel }) => {
-  const [clienteId, setClienteId] = useState("");
+  const [clienteId, setClienteId] = useState("cliente_avulso"); // MUDANÇA: valor padrão não vazio
   const [clienteNome, setClienteNome] = useState("");
   const [itens, setItens] = useState([]);
   const [produtoSelecionado, setProdutoSelecionado] = useState("");
@@ -28,7 +28,6 @@ const NovaVendaForm = ({ onSuccess, onCancel }) => {
     queryKey: ['produtos-venda'],
     queryFn: async () => {
       const response = await aroma.produtos.listar();
-      // Garantir que é array e filtrar apenas com estoque
       const produtosArray = Array.isArray(response) ? response : [];
       return produtosArray.filter(p => p?.ativo !== false && (p?.estoque_atual || 0) > 0);
     },
@@ -57,7 +56,6 @@ const NovaVendaForm = ({ onSuccess, onCancel }) => {
     },
   });
 
-  // Função segura para formatar preço
   const formatPrice = (value) => {
     if (value === null || value === undefined || value === '') return '0.00';
     const num = parseFloat(value);
@@ -78,7 +76,6 @@ const NovaVendaForm = ({ onSuccess, onCancel }) => {
     const produto = produtos.find(p => p.id === produtoSelecionado);
     if (!produto) return;
 
-    // Verificar estoque
     if ((produto.estoque_atual || 0) < quantidade) {
       toast.error(`Estoque insuficiente. Disponível: ${produto.estoque_atual || 0}`);
       return;
@@ -113,11 +110,19 @@ const NovaVendaForm = ({ onSuccess, onCancel }) => {
     }
 
     const valorTotal = itens.reduce((acc, item) => acc + (item.subtotal || 0), 0);
-    const clienteSelecionado = clientes.find(c => c.id === clienteId);
+    
+    // Determinar nome do cliente
+    let nomeCliente = "Venda Avulsa";
+    if (clienteId && clienteId !== "cliente_avulso") {
+      const clienteSelecionado = clientes.find(c => c.id === clienteId);
+      nomeCliente = clienteSelecionado?.nome || "Venda Avulsa";
+    } else if (clienteNome.trim()) {
+      nomeCliente = clienteNome.trim();
+    }
 
     const vendaData = {
-      cliente_id: clienteId || null,
-      cliente_nome: clienteSelecionado?.nome || clienteNome || "Venda Avulsa",
+      cliente_id: clienteId !== "cliente_avulso" ? clienteId : null,
+      cliente_nome: nomeCliente,
       itens: itens.map(item => ({
         ...item,
         preco_unitario: parseFloat(item.preco_unitario) || 0,
@@ -131,7 +136,6 @@ const NovaVendaForm = ({ onSuccess, onCancel }) => {
     criarVendaMutation.mutate(vendaData);
   };
 
-  // Filtrar produtos baseado na busca
   const filteredProdutos = produtos.filter(p => 
     p.nome?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     p.marca?.toLowerCase().includes(searchTerm.toLowerCase())
@@ -152,10 +156,10 @@ const NovaVendaForm = ({ onSuccess, onCancel }) => {
         <Label htmlFor="cliente">Cliente</Label>
         <Select value={clienteId} onValueChange={setClienteId}>
           <SelectTrigger>
-            <SelectValue placeholder="Selecione um cliente ou digite abaixo" />
+            <SelectValue placeholder="Selecione um cliente" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="">Venda Avulsa</SelectItem>
+            <SelectItem value="cliente_avulso">Venda Avulsa</SelectItem>
             {clientes.map((cliente) => (
               <SelectItem key={cliente.id} value={cliente.id}>
                 {cliente.nome}
@@ -164,15 +168,15 @@ const NovaVendaForm = ({ onSuccess, onCancel }) => {
           </SelectContent>
         </Select>
         
-        {/* Cliente não cadastrado */}
-        {!clienteId && (
+        {/* Cliente não cadastrado - só aparece se "Venda Avulsa" estiver selecionado */}
+        {clienteId === "cliente_avulso" && (
           <div className="mt-2">
-            <Label htmlFor="cliente_nome">Ou digite o nome do cliente</Label>
+            <Label htmlFor="cliente_nome">Ou digite o nome do cliente (não cadastrado)</Label>
             <Input
               id="cliente_nome"
               value={clienteNome}
               onChange={(e) => setClienteNome(e.target.value)}
-              placeholder="Nome do cliente não cadastrado"
+              placeholder="Nome do cliente"
               className="mt-1"
             />
           </div>
@@ -202,7 +206,7 @@ const NovaVendaForm = ({ onSuccess, onCancel }) => {
                 onValueChange={setProdutoSelecionado}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="Selecione..." />
+                  <SelectValue placeholder="Selecione um produto" />
                 </SelectTrigger>
                 <SelectContent>
                   {filteredProdutos.map((produto) => (
