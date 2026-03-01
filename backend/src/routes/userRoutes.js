@@ -6,9 +6,15 @@ const router = express.Router();
 
 // Middleware para verificar se é admin
 const isAdmin = (req, res, next) => {
+  console.log('🔐 Verificando admin:', req.user);
+  
+  // Verificar se o usuário tem a flag isAdmin
   if (!req.user?.isAdmin) {
+    console.log('❌ Acesso negado - usuário não é admin');
     return res.status(403).json({ error: 'Acesso negado. Apenas administradores.' });
   }
+  
+  console.log('✅ Usuário é admin, permitindo acesso');
   next();
 };
 
@@ -19,6 +25,7 @@ router.use(isAdmin);
 // LISTAR usuários
 router.get('/', async (req, res) => {
   try {
+    console.log('📋 Listando usuários...');
     const users = await User.findAll();
     res.json(users);
   } catch (error) {
@@ -30,9 +37,9 @@ router.get('/', async (req, res) => {
 // CRIAR usuário
 router.post('/', async (req, res) => {
   try {
+    console.log('➕ Criando usuário:', req.body.email);
     const { email, password, name } = req.body;
     
-    // Verificar se email já existe
     const existingUser = await User.findByEmail(email);
     if (existingUser) {
       return res.status(400).json({ error: 'Email já cadastrado' });
