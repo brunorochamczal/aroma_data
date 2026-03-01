@@ -114,6 +114,15 @@ export const aroma = {
     }
   },
 
+
+  // Em clientes, após desativar:
+excluir: async (id) => {
+  return apiRequest(`/clientes/${id}`, {
+    method: 'DELETE'
+  });
+},
+  
+
   // ==================== PRODUTOS ====================
   produtos: {
     listar: async (filtros = {}) => {
@@ -144,6 +153,14 @@ export const aroma = {
         method: 'DELETE'
       });
     },
+
+
+    // Em produtos, após desativar:
+excluir: async (id) => {
+  return apiRequest(`/produtos/${id}`, {
+    method: 'DELETE'
+  });
+},
 
     atualizarEstoque: async (id, quantidade) => {  // <-- ADICIONADO
       return apiRequest(`/produtos/${id}/estoque`, {
@@ -185,6 +202,14 @@ export const aroma = {
     }
   },
 
+
+  // Em fornecedores, após desativar:
+excluir: async (id) => {
+  return apiRequest(`/fornecedores/${id}`, {
+    method: 'DELETE'
+  });
+},
+
   // ==================== VENDAS ====================
   vendas: {
     listar: async (filtros = {}) => {
@@ -209,6 +234,13 @@ export const aroma = {
       });
     }
   },
+
+  // Em vendas, após cancelar:
+excluir: async (id) => {
+  return apiRequest(`/vendas/${id}`, {
+    method: 'DELETE'
+  });
+},
 
   // ==================== MOVIMENTAÇÕES ====================
   movimentacoes: {
