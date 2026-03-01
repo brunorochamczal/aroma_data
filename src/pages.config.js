@@ -5,11 +5,11 @@
 import Clientes from './pages/Clientes';
 import Dashboard from './pages/Dashboard';
 import Fornecedores from './pages/Fornecedores';
-import Produtos from './pages/Produtos';        // DEVE ESTAR AQUI
-import Relatorios from './pages/Relatorios';    // DEVE ESTAR AQUI
-import Vendas from './pages/Vendas';            // DEVE ESTAR AQUI
+import Produtos from './pages/Produtos';
+import Relatorios from './pages/Relatorios';
+import Vendas from './pages/Vendas';
+import Teste from './pages/Teste';      // <-- ADICIONADO
 import __Layout from './Layout.jsx';
-import Teste from './pages/Teste';
 
 // LOG DETALHADO
 console.log('📦 Importação de páginas:');
@@ -19,15 +19,18 @@ console.log('   - Fornecedores:', Fornecedores ? '✅' : '❌');
 console.log('   - Produtos:', Produtos ? '✅' : '❌');
 console.log('   - Relatorios:', Relatorios ? '✅' : '❌');
 console.log('   - Vendas:', Vendas ? '✅' : '❌');
+console.log('   - Teste:', Teste ? '✅' : '❌');
 
-export const PAGES = {
+// ÚNICA DECLARAÇÃO DE PAGES
+const PAGES = {
+    "Teste": Teste,           // <-- ADICIONADO PARA TESTE
     "Clientes": Clientes,
     "Dashboard": Dashboard,
     "Fornecedores": Fornecedores,
     "Produtos": Produtos,
     "Relatorios": Relatorios,
     "Vendas": Vendas,
-}
+};
 
 export const pagesConfig = {
     mainPage: "Dashboard",
@@ -35,20 +38,13 @@ export const pagesConfig = {
     Layout: __Layout,
 };
 
-
-export const PAGES = {
-    "Teste": Teste,  // <-- ADICIONE ISSO
-    "Clientes": Clientes,
-    "Dashboard": Dashboard,
-    "Fornecedores": Fornecedores,
-    "Produtos": Produtos,
-    "Relatorios": Relatorios,
-    "Vendas": Vendas,
-}
-
+// Exporta PAGES também se necessário em outros lugares
+export { PAGES };
 
 // EXPOR PARA DEBUG
 if (typeof window !== 'undefined') {
     window.pagesConfig = pagesConfig;
+    window.PAGES = PAGES;      // <-- ADICIONADO
     console.log('✅ pagesConfig exposto em window.pagesConfig');
+    console.log('📋 Páginas disponíveis:', Object.keys(PAGES));
 }
