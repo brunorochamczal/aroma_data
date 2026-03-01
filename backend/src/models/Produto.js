@@ -1,11 +1,14 @@
 import { query } from '../config/database.js';
 
 export const Produto = {
-  // LISTAR
+  // LISTAR todos os produtos
   async findAll() {
     try {
       const result = await query(
-        'SELECT * FROM produtos WHERE ativo = true ORDER BY created_at DESC'
+        `SELECT p.*, f.nome as fornecedor_nome 
+         FROM produtos p 
+         LEFT JOIN fornecedores f ON p.fornecedor_id = f.id 
+         ORDER BY p.created_at DESC`
       );
       return result.rows;
     } catch (error) {
@@ -14,11 +17,14 @@ export const Produto = {
     }
   },
 
-  // BUSCAR POR ID
+  // BUSCAR por ID
   async findById(id) {
     try {
       const result = await query(
-        'SELECT * FROM produtos WHERE id = $1 AND ativo = true',
+        `SELECT p.*, f.nome as fornecedor_nome 
+         FROM produtos p 
+         LEFT JOIN fornecedores f ON p.fornecedor_id = f.id 
+         WHERE p.id = $1`,
         [id]
       );
       return result.rows[0];
@@ -28,7 +34,7 @@ export const Produto = {
     }
   },
 
-  // CRIAR
+  // CRIAR produto
   async create(data) {
     const { 
       nome, marca, volume, preco_custo, preco_venda, 
@@ -51,7 +57,7 @@ export const Produto = {
     }
   },
 
-  // ATUALIZAR
+  // ATUALIZAR produto
   async update(id, data) {
     const { 
       nome, marca, volume, preco_custo, preco_venda, 
@@ -63,7 +69,7 @@ export const Produto = {
         `UPDATE produtos 
          SET nome = $1, marca = $2, volume = $3, preco_custo = $4, preco_venda = $5,
              estoque_atual = $6, estoque_minimo = $7, fornecedor_id = $8, updated_at = NOW()
-         WHERE id = $9 AND ativo = true
+         WHERE id = $9
          RETURNING *`,
         [nome, marca, volume, preco_custo, preco_venda, estoque_atual, estoque_minimo, fornecedor_id, id]
       );
@@ -74,13 +80,39 @@ export const Produto = {
     }
   },
 
-  // DELETAR (soft delete)
+  // ATUALIZAR ESTOQUE
+  async updateStock(id, quantidade, operacao = 'add') {
+    try {
+      let sql;
+      if (operacao === 'add') {
+        sql = 'UPDATE produtos SET estoque_atual = estoque_atual + $1, updated_at = NOW() WHERE id = $2 RETURNING *';
+      } else {
+        sql = 'UPDATE produtos SET estoque_atual = estoque_atual - $1, updated_at = NOW() WHERE id = $2 AND estoque_atual >= $1 RETURNING *';
+      }
+      
+      const result = await query(sql, [quantidade, id]);
+      return result.rows[0];
+    } catch (error) {
+      console.error('❌ Erro em Produto.updateStock:', error);
+      throw error;
+    }
+  },
+
+  // EXCLUIR produto (DELETE REAL)
   async delete(id) {
     try {
-      const result = await query(
-        'UPDATE produtos SET ativo = false, updated_at = NOW() WHERE id = $1 RETURNING *',
+      // Verificar se existem vendas com este produto
+      const vendas = await query(
+        'SELECT vi.id FROM venda_itens vi WHERE vi.produto_id = $1 LIMIT 1',
         [id]
       );
+      
+      if (vendas.rows.length > 0) {
+        throw new Error('Produto possui vendas associadas e não pode ser excluído');
+      }
+      
+      // DELETE REAL
+      const result = await query('DELETE FROM produtos WHERE id = $1 RETURNING *', [id]);
       return result.rows[0];
     } catch (error) {
       console.error('❌ Erro em Produto.delete:', error);
