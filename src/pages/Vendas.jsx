@@ -5,7 +5,7 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { 
   Plus, Search, ShoppingCart, Loader2, 
-  Eye, Calendar, MoreVertical, CheckCircle
+  Eye, Calendar, MoreVertical, CheckCircle, Trash2
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -107,7 +107,7 @@ export default function Vendas() {
       <div className="relative">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
         <Input 
-          placeholder="Buscar por cliente ou ID..."
+          placeholder="Buscar por cliente..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           className="pl-10 bg-white/70 border-purple-100"
@@ -133,93 +133,76 @@ export default function Vendas() {
           </CardContent>
         </Card>
       ) : (
-        <Card className="bg-white/70 border-0 shadow-lg overflow-hidden">
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow className="bg-gray-50/50">
-                  <TableHead>Data</TableHead>
-                  <TableHead>Cliente</TableHead>
-                  <TableHead>Itens</TableHead>
-                  <TableHead>Total</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className="text-right">Ações</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredVendas.map((venda) => (
-                  <TableRow 
-                    key={venda.id} 
-                    className="cursor-pointer hover:bg-purple-50/50"
-                    onClick={() => setSelectedVenda(venda)}
-                  >
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        <Calendar className="h-4 w-4 text-gray-400" />
-                        <span className="text-sm">
-                          {format(new Date(venda.created_at), "dd/MM/yyyy HH:mm", { locale: ptBR })}
-                        </span>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-500 to-violet-600 flex items-center justify-center text-white text-xs font-bold">
-                          {venda.cliente_nome?.[0] || "A"}
-                        </div>
-                        <span className="font-medium">{venda.cliente_nome || "Venda Avulsa"}</span>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <span className="text-sm text-gray-600">
-                        {venda.itens?.length || 0} {venda.itens?.length === 1 ? 'item' : 'itens'}
-                      </span>
-                    </TableCell>
-                    <TableCell>
-                      <span className="font-semibold text-emerald-600">
-                        R$ {(venda.valor_final || venda.valor_total || 0).toFixed(2)}
-                      </span>
-                    </TableCell>
-                    <TableCell>
-                      {venda.cancelada ? (
-                        <Badge variant="destructive">Cancelada</Badge>
-                      ) : (
-                        <Badge className="bg-emerald-100 text-emerald-700 hover:bg-emerald-100">
-                          Concluída
-                        </Badge>
-                      )}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button 
-                            variant="ghost" 
-                            size="icon"
-                            onClick={(e) => e.stopPropagation()}
-                          >
-                            <MoreVertical className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem onClick={() => setSelectedVenda(venda)}>
-                            <Eye className="h-4 w-4 mr-2" />
-                            Ver detalhes
-                          </DropdownMenuItem>
-                          <DropdownMenuItem 
-                            onClick={() => handleDeleteClick(venda.id)}
-                            className="text-red-600"
-                          >
-                            <Trash2 className="h-4 w-4 mr-2" />
-                            Excluir
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
-        </Card>
+        <div className="grid grid-cols-1 gap-4">
+          {filteredVendas.map((venda) => (
+            <Card 
+              key={venda.id} 
+              className="bg-white/70 border-0 shadow-lg hover:shadow-xl transition-all duration-300 group"
+            >
+              <CardContent className="p-5">
+                <div className="flex items-start justify-between mb-4">
+                  <div className="flex items-center gap-3">
+                    <div className="w-12 h-12 rounded-full bg-gradient-to-br from-purple-500 to-violet-600 flex items-center justify-center text-white font-bold">
+                      {venda.cliente_nome?.[0] || "V"}
+                    </div>
+                    <div>
+                      <h3 className="font-semibold text-gray-900">{venda.cliente_nome || "Venda Avulsa"}</h3>
+                      <p className="text-sm text-gray-500">
+                        {format(new Date(venda.created_at), "dd/MM/yyyy HH:mm", { locale: ptBR })}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {venda.cancelada ? (
+                      <Badge variant="destructive">Cancelada</Badge>
+                    ) : (
+                      <Badge className="bg-emerald-100 text-emerald-700">Concluída</Badge>
+                    )}
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon" className="opacity-0 group-hover:opacity-100 transition-opacity">
+                          <MoreVertical className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={() => setSelectedVenda(venda)}>
+                          <Eye className="h-4 w-4 mr-2" />
+                          Ver detalhes
+                        </DropdownMenuItem>
+                        <DropdownMenuItem 
+                          onClick={() => handleDeleteClick(venda.id)}
+                          className="text-red-600"
+                        >
+                          <Trash2 className="h-4 w-4 mr-2" />
+                          Excluir
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-3 gap-4 mt-4">
+                  <div>
+                    <p className="text-xs text-gray-400">Total de Itens</p>
+                    <p className="font-semibold">{venda.itens?.length || 0}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-400">Valor Total</p>
+                    <p className="font-semibold text-emerald-600">
+                      R$ {(venda.valor_final || venda.valor_total || 0).toFixed(2)}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-400">Desconto</p>
+                    <p className="font-semibold text-red-500">
+                      R$ {(venda.desconto || 0).toFixed(2)}
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
       )}
 
       {/* Modal de Sucesso */}
@@ -255,7 +238,7 @@ export default function Vendas() {
           </DialogHeader>
           <div className="text-center py-4">
             <p className="text-gray-600 mb-2">
-              Tem certeza que deseja excluir permanentemente?
+              Tem certeza que deseja excluir permanentemente esta venda?
             </p>
             <p className="text-sm text-red-500">
               Esta ação não pode ser desfeita!
