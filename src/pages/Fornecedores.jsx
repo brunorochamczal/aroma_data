@@ -3,7 +3,7 @@ import { aroma } from "@/api/aromaClient";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { 
   Plus, Search, Edit2, Trash2, Phone, Mail, MapPin, 
-  Loader2, Building2, MoreVertical
+  Loader2, Building2, MoreVertical, CheckCircle
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,6 +13,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogFooter,
 } from "@/components/ui/dialog";
 import {
   DropdownMenu,
@@ -35,6 +36,12 @@ export default function Fornecedores() {
     email: "",
     endereco: "",
   });
+  
+  // Estados para modais
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [successMessage, setSuccessMessage] = useState("");
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [itemToDelete, setItemToDelete] = useState(null);
 
   const queryClient = useQueryClient();
 
@@ -52,8 +59,13 @@ export default function Fornecedores() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['fornecedores'] });
-      toast.success("Fornecedor cadastrado com sucesso!");
+      setSuccessMessage("Fornecedor cadastrado com sucesso!");
+      setShowSuccessModal(true);
       resetForm();
+    },
+    onError: (error) => {
+      toast.error("Erro ao cadastrar fornecedor");
+      console.error(error);
     },
   });
 
@@ -63,18 +75,27 @@ export default function Fornecedores() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['fornecedores'] });
-      toast.success("Fornecedor atualizado com sucesso!");
+      setSuccessMessage("Fornecedor atualizado com sucesso!");
+      setShowSuccessModal(true);
       resetForm();
+    },
+    onError: (error) => {
+      toast.error("Erro ao atualizar fornecedor");
+      console.error(error);
     },
   });
 
   const deleteMutation = useMutation({
     mutationFn: async (id) => {
-      return await aroma.fornecedores.desativar(id);
+      return await aroma.fornecedores.excluir(id);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['fornecedores'] });
-      toast.success("Fornecedor desativado com sucesso!");
+      toast.success("Fornecedor excluído permanentemente!");
+    },
+    onError: (error) => {
+      toast.error(error.message || "Erro ao excluir fornecedor");
+      console.error(error);
     },
   });
 
@@ -89,7 +110,7 @@ export default function Fornecedores() {
     if (editingFornecedor) {
       updateMutation.mutate({ id: editingFornecedor.id, data: formData });
     } else {
-      createMutation.mutate({ ...formData, ativo: true });
+      createMutation.mutate({ ...formData });
     }
   };
 
@@ -105,11 +126,23 @@ export default function Fornecedores() {
     setShowForm(true);
   };
 
+  const handleDeleteClick = (id) => {
+    setItemToDelete(id);
+    setShowDeleteConfirm(true);
+  };
+
+  const confirmDelete = () => {
+    if (itemToDelete) {
+      deleteMutation.mutate(itemToDelete);
+      setShowDeleteConfirm(false);
+      setItemToDelete(null);
+    }
+  };
+
   const filteredFornecedores = fornecedores.filter(f => 
-    f.ativo !== false && 
-    (f.nome?.toLowerCase().includes(search.toLowerCase()) ||
-     f.cnpj?.includes(search) ||
-     f.email?.toLowerCase().includes(search.toLowerCase()))
+    f.nome?.toLowerCase().includes(search.toLowerCase()) ||
+    f.cnpj?.includes(search) ||
+    f.email?.toLowerCase().includes(search.toLowerCase())
   );
 
   return (
@@ -188,7 +221,7 @@ export default function Fornecedores() {
                         Editar
                       </DropdownMenuItem>
                       <DropdownMenuItem 
-                        onClick={() => deleteMutation.mutate(fornecedor.id)}
+                        onClick={() => handleDeleteClick(fornecedor.id)}
                         className="text-red-600"
                       >
                         <Trash2 className="h-4 w-4 mr-2" />
@@ -224,6 +257,68 @@ export default function Fornecedores() {
         </div>
       )}
 
+      {/* Modal de Sucesso */}
+      <Dialog open={showSuccessModal} onOpenChange={setShowSuccessModal}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-center text-emerald-600 flex items-center justify-center gap-2">
+              <CheckCircle className="h-6 w-6" />
+              Sucesso!
+            </DialogTitle>
+          </DialogHeader>
+          <div className="text-center py-4">
+            <p className="text-gray-600">{successMessage}</p>
+          </div>
+          <DialogFooter>
+            <Button 
+              onClick={() => setShowSuccessModal(false)} 
+              className="w-full bg-gradient-to-r from-emerald-500 to-teal-500"
+            >
+              OK
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal de Confirmação de Exclusão */}
+      <Dialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-center text-red-600">
+              ⚠️ Confirmar Exclusão
+            </DialogTitle>
+          </DialogHeader>
+          <div className="text-center py-4">
+            <p className="text-gray-600 mb-2">
+              Tem certeza que deseja excluir permanentemente?
+            </p>
+            <p className="text-sm text-red-500">
+              Esta ação não pode ser desfeita!
+            </p>
+          </div>
+          <DialogFooter className="flex gap-2">
+            <Button 
+              variant="outline" 
+              onClick={() => setShowDeleteConfirm(false)}
+              className="flex-1"
+            >
+              Cancelar
+            </Button>
+            <Button 
+              onClick={confirmDelete}
+              className="flex-1 bg-red-600 hover:bg-red-700"
+              disabled={deleteMutation.isPending}
+            >
+              {deleteMutation.isPending ? (
+                <Loader2 className="h-4 w-4 animate-spin mr-2" />
+              ) : null}
+              Sim, Excluir
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Form Dialog */}
       <Dialog open={showForm} onOpenChange={(open) => !open && resetForm()}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
