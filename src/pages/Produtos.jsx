@@ -2,8 +2,8 @@ import React, { useState } from "react";
 import { aroma } from "@/api/aromaClient";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { 
-  Plus, Search, Edit2, Trash2, Package, 
-  Loader2, MoreVertical, AlertTriangle, CheckCircle
+  Plus, Search, Edit2, Trash2, Phone, Mail, MapPin, 
+  Loader2, Building2, MoreVertical, CheckCircle, Package, AlertTriangle
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -30,6 +30,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 
 export default function Produtos() {
@@ -231,7 +232,7 @@ export default function Produtos() {
           </CardContent>
         </Card>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {filteredProdutos.map((produto) => {
             const isLowStock = (produto.estoque_atual || 0) <= (produto.estoque_minimo || 5);
             return (
@@ -240,9 +241,15 @@ export default function Produtos() {
                 className={`bg-white/70 border-0 shadow-lg hover:shadow-xl transition-all duration-300 group ${isLowStock ? 'ring-2 ring-amber-400' : ''}`}
               >
                 <CardContent className="p-5">
-                  <div className="flex items-start justify-between mb-3">
-                    <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-purple-100 to-violet-100 flex items-center justify-center">
-                      <Package className="h-7 w-7 text-purple-600" />
+                  <div className="flex items-start justify-between mb-4">
+                    <div className="flex items-center gap-3">
+                      <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-purple-500 to-violet-600 flex items-center justify-center text-white">
+                        <Package className="h-6 w-6" />
+                      </div>
+                      <div>
+                        <h3 className="font-semibold text-gray-900">{produto.nome}</h3>
+                        <p className="text-sm text-gray-500">{produto.marca}</p>
+                      </div>
                     </div>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
@@ -266,34 +273,25 @@ export default function Produtos() {
                     </DropdownMenu>
                   </div>
 
-                  <h3 className="font-semibold text-gray-900 mb-1">{produto.nome}</h3>
-                  <p className="text-sm text-gray-500 mb-3">
-                    {produto.marca} {produto.volume && `• ${produto.volume}`}
-                  </p>
-
-                  <div className="flex items-center justify-between mb-3">
-                    <div>
-                      <p className="text-xs text-gray-400">Preço de venda</p>
-                      <p className="text-lg font-bold text-emerald-600">
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2 text-sm text-gray-600">
+                      <span className="font-medium">Preço:</span>
+                      <span className="text-emerald-600 font-bold">
                         R$ {produto.preco_venda?.toFixed(2)}
-                      </p>
+                      </span>
                     </div>
-                    <div className="text-right">
-                      <p className="text-xs text-gray-400">Custo</p>
-                      <p className="text-sm text-gray-600">
-                        R$ {produto.preco_custo?.toFixed(2)}
-                      </p>
+                    <div className="flex items-center gap-2 text-sm text-gray-600">
+                      <span className="font-medium">Estoque:</span>
+                      <span className={isLowStock ? 'text-amber-600 font-bold' : 'text-gray-600'}>
+                        {produto.estoque_atual || 0} un
+                        {isLowStock && <AlertTriangle className="h-3 w-3 ml-1 inline" />}
+                      </span>
                     </div>
-                  </div>
-
-                  <div className="flex items-center justify-between">
-                    <Badge 
-                      variant="outline" 
-                      className={`${isLowStock ? 'border-amber-500 text-amber-600 bg-amber-50' : 'border-emerald-500 text-emerald-600 bg-emerald-50'}`}
-                    >
-                      {isLowStock && <AlertTriangle className="h-3 w-3 mr-1" />}
-                      {produto.estoque_atual || 0} em estoque
-                    </Badge>
+                    {produto.volume && (
+                      <div className="text-sm text-gray-500">
+                        Volume: {produto.volume}
+                      </div>
+                    )}
                   </div>
                 </CardContent>
               </Card>
