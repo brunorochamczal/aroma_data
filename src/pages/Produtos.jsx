@@ -475,3 +475,7 @@ export default function Produtos() {
     </div>
   );
 }
+
+
+
+export default Produtos;  
