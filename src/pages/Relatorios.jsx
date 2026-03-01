@@ -27,6 +27,16 @@ import {
 } from "@/components/ui/table";
 import { toast } from "sonner";
 
+
+console.log('📊 Relatorios: componente renderizando');
+
+return (
+  <div className="space-y-6">
+    <div style={{display: 'none'}}>Debug: Relatorios carregado</div>
+    {/* Resto do conteúdo */}
+  </div>
+);
+
 export default function Relatorios() {
   const [periodo, setPeriodo] = useState("mes_atual");
 
