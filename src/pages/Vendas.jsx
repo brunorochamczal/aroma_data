@@ -5,7 +5,7 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { 
   Plus, Search, ShoppingCart, Loader2, 
-  Eye, Calendar, MoreVertical
+  Eye, Calendar, MoreVertical, CheckCircle
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -16,6 +16,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogFooter,
 } from "@/components/ui/dialog";
 import {
   DropdownMenu,
@@ -39,6 +40,11 @@ export default function Vendas() {
   const [search, setSearch] = useState("");
   const [showNovaVenda, setShowNovaVenda] = useState(false);
   const [selectedVenda, setSelectedVenda] = useState(null);
+  
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [successMessage, setSuccessMessage] = useState("");
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [itemToDelete, setItemToDelete] = useState(null);
 
   const queryClient = useQueryClient();
 
@@ -46,49 +52,40 @@ export default function Vendas() {
     queryKey: ['vendas'],
     queryFn: async () => {
       const response = await aroma.vendas.listar();
-      return response.sort((a, b) => new Date(b.created_date) - new Date(a.created_date));
+      return response.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
     },
   });
 
-  const cancelarMutation = useMutation({
-    mutationFn: async (venda) => {
-      // Restaurar estoque
-      if (venda.itens && !venda.cancelada) {
-        for (const item of venda.itens) {
-          const produtos = await aroma.produtos.listar();
-          const produto = produtos.find(p => p.id === item.produto_id);
-          if (produto) {
-            await aroma.produtos.atualizar(produto.id, {
-              estoque_atual: (produto.estoque_atual || 0) + item.quantidade
-            });
-            await aroma.movimentacoes.criar({
-              produto_id: produto.id,
-              produto_nome: produto.nome,
-              tipo: "ENTRADA",
-              quantidade: item.quantidade,
-              motivo: "CANCELAMENTO",
-              referencia_id: venda.id,
-            });
-          }
-        }
-      }
-      await aroma.vendas.cancelar(venda.id);
+  const deleteMutation = useMutation({
+    mutationFn: async (id) => {
+      return await aroma.vendas.excluir(id);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['vendas'] });
-      queryClient.invalidateQueries({ queryKey: ['produtos'] });
-      toast.success("Venda cancelada com sucesso!");
-      setSelectedVenda(null);
+      toast.success("Venda excluída permanentemente!");
     },
     onError: (error) => {
-      toast.error("Erro ao cancelar venda");
+      toast.error(error.message || "Erro ao excluir venda");
       console.error(error);
     },
   });
 
+  const handleDeleteClick = (id) => {
+    setItemToDelete(id);
+    setShowDeleteConfirm(true);
+  };
+
+  const confirmDelete = () => {
+    if (itemToDelete) {
+      deleteMutation.mutate(itemToDelete);
+      setShowDeleteConfirm(false);
+      setItemToDelete(null);
+    }
+  };
+
   const filteredVendas = vendas.filter(v => 
     v.cliente_nome?.toLowerCase().includes(search.toLowerCase()) ||
-    v.id?.toLowerCase().includes(search.toLowerCase())
+    v.id?.toString().includes(search)
   );
 
   return (
@@ -160,7 +157,7 @@ export default function Vendas() {
                       <div className="flex items-center gap-2">
                         <Calendar className="h-4 w-4 text-gray-400" />
                         <span className="text-sm">
-                          {format(new Date(venda.created_date), "dd/MM/yyyy HH:mm", { locale: ptBR })}
+                          {format(new Date(venda.created_at), "dd/MM/yyyy HH:mm", { locale: ptBR })}
                         </span>
                       </div>
                     </TableCell>
@@ -207,14 +204,13 @@ export default function Vendas() {
                             <Eye className="h-4 w-4 mr-2" />
                             Ver detalhes
                           </DropdownMenuItem>
-                          {!venda.cancelada && (
-                            <DropdownMenuItem 
-                              onClick={() => cancelarMutation.mutate(venda)}
-                              className="text-red-600"
-                            >
-                              Cancelar venda
-                            </DropdownMenuItem>
-                          )}
+                          <DropdownMenuItem 
+                            onClick={() => handleDeleteClick(venda.id)}
+                            className="text-red-600"
+                          >
+                            <Trash2 className="h-4 w-4 mr-2" />
+                            Excluir
+                          </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </TableCell>
@@ -226,6 +222,67 @@ export default function Vendas() {
         </Card>
       )}
 
+      {/* Modal de Sucesso */}
+      <Dialog open={showSuccessModal} onOpenChange={setShowSuccessModal}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-center text-emerald-600 flex items-center justify-center gap-2">
+              <CheckCircle className="h-6 w-6" />
+              Sucesso!
+            </DialogTitle>
+          </DialogHeader>
+          <div className="text-center py-4">
+            <p className="text-gray-600">{successMessage}</p>
+          </div>
+          <DialogFooter>
+            <Button 
+              onClick={() => setShowSuccessModal(false)} 
+              className="w-full bg-gradient-to-r from-emerald-500 to-teal-500"
+            >
+              OK
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal de Confirmação de Exclusão */}
+      <Dialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-center text-red-600">
+              ⚠️ Confirmar Exclusão
+            </DialogTitle>
+          </DialogHeader>
+          <div className="text-center py-4">
+            <p className="text-gray-600 mb-2">
+              Tem certeza que deseja excluir permanentemente?
+            </p>
+            <p className="text-sm text-red-500">
+              Esta ação não pode ser desfeita!
+            </p>
+          </div>
+          <DialogFooter className="flex gap-2">
+            <Button 
+              variant="outline" 
+              onClick={() => setShowDeleteConfirm(false)}
+              className="flex-1"
+            >
+              Cancelar
+            </Button>
+            <Button 
+              onClick={confirmDelete}
+              className="flex-1 bg-red-600 hover:bg-red-700"
+              disabled={deleteMutation.isPending}
+            >
+              {deleteMutation.isPending ? (
+                <Loader2 className="h-4 w-4 animate-spin mr-2" />
+              ) : null}
+              Sim, Excluir
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {/* Nova Venda Dialog */}
       <Dialog open={showNovaVenda} onOpenChange={setShowNovaVenda}>
         <DialogContent className="sm:max-w-3xl max-h-[90vh] overflow-y-auto">
@@ -235,6 +292,8 @@ export default function Vendas() {
           <NovaVendaForm 
             onSuccess={() => {
               setShowNovaVenda(false);
+              setSuccessMessage("Venda realizada com sucesso!");
+              setShowSuccessModal(true);
               queryClient.invalidateQueries({ queryKey: ['vendas'] });
               queryClient.invalidateQueries({ queryKey: ['produtos'] });
             }}
@@ -250,11 +309,7 @@ export default function Vendas() {
             <DialogTitle>Detalhes da Venda</DialogTitle>
           </DialogHeader>
           {selectedVenda && (
-            <VendaDetalhe 
-              venda={selectedVenda}
-              onCancelar={() => cancelarMutation.mutate(selectedVenda)}
-              isCancelling={cancelarMutation.isPending}
-            />
+            <VendaDetalhe venda={selectedVenda} />
           )}
         </DialogContent>
       </Dialog>
