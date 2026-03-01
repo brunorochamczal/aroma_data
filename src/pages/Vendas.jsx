@@ -36,7 +36,7 @@ import { toast } from "sonner";
 import NovaVendaForm from "@/components/vendas/NovaVendaForm";
 import VendaDetalhe from "@/components/vendas/VendaDetalhe";
 
-export default function Vendas() {
+const Vendas = () => {
   const [search, setSearch] = useState("");
   const [showNovaVenda, setShowNovaVenda] = useState(false);
   const [selectedVenda, setSelectedVenda] = useState(null);
@@ -81,6 +81,13 @@ export default function Vendas() {
       setShowDeleteConfirm(false);
       setItemToDelete(null);
     }
+  };
+
+  // Função segura para formatar preço
+  const formatPrice = (value) => {
+    if (value === null || value === undefined || value === '') return '0.00';
+    const num = parseFloat(value);
+    return isNaN(num) ? '0.00' : num.toFixed(2);
   };
 
   const filteredVendas = vendas.filter(v => 
@@ -189,13 +196,13 @@ export default function Vendas() {
                   <div>
                     <p className="text-xs text-gray-400">Valor Total</p>
                     <p className="font-semibold text-emerald-600">
-                      R$ {(venda.valor_final || venda.valor_total || 0).toFixed(2)}
+                      R$ {formatPrice(venda.valor_final || venda.valor_total || 0)}
                     </p>
                   </div>
                   <div>
                     <p className="text-xs text-gray-400">Desconto</p>
                     <p className="font-semibold text-red-500">
-                      R$ {(venda.desconto || 0).toFixed(2)}
+                      R$ {formatPrice(venda.desconto || 0)}
                     </p>
                   </div>
                 </div>
@@ -298,4 +305,6 @@ export default function Vendas() {
       </Dialog>
     </div>
   );
-}
+};
+
+export default Vendas;
