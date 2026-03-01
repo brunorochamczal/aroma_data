@@ -33,7 +33,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 
-export default function Produtos() {
+const Produtos = () => {
   const [search, setSearch] = useState("");
   const [showForm, setShowForm] = useState(false);
   const [editingProduto, setEditingProduto] = useState(null);
@@ -474,8 +474,7 @@ export default function Produtos() {
       </Dialog>
     </div>
   );
-}
+};
 
-
-
-export default Produtos;  
+// ✅ ÚNICO EXPORT DEFAULT - NO FINAL DO ARQUIVO
+export default Produtos;
