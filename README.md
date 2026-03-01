@@ -106,14 +106,8 @@ Entre em contato com o administrador do sistema.
 
 ## 📸 **Capturas de Tela**
 
-*(Adicione aqui prints do sistema)*
-
-
-
 <div align="center">
   
-### 📸 Capturas de Tela
-
 | Dashboard | Vendas | Relatórios |
 |:---:|:---:|:---:|
 | <img src="./img_readme/img_d.png" width="280" alt="Dashboard"/> | <img src="./img_readme/img_v.png" width="280" alt="Vendas"/> | <img src="./img_readme/img_r.png" width="280" alt="Relatórios"/> |
