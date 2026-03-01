@@ -27,8 +27,8 @@ import {
 } from "@/components/ui/table";
 import { toast } from "sonner";
 
-export default function Relatorios() {
-  console.log('📊 Relatorios: componente renderizando'); // <-- AGORA DENTRO DA FUNÇÃO
+const Relatorios = () => {
+  console.log('📊 Relatorios: componente renderizando');
   
   const [periodo, setPeriodo] = useState("mes_atual");
 
@@ -63,6 +63,13 @@ export default function Relatorios() {
       return response;
     },
   });
+
+  // Função segura para formatar preço
+  const formatPrice = (value) => {
+    if (value === null || value === undefined || value === '') return '0.00';
+    const num = parseFloat(value);
+    return isNaN(num) ? '0.00' : num.toFixed(2);
+  };
 
   const getDateRange = () => {
     const now = new Date();
@@ -112,9 +119,9 @@ export default function Relatorios() {
       data: format(new Date(v.created_at), "dd/MM/yyyy HH:mm"),
       cliente: v.cliente_nome || "Venda Avulsa",
       itens: v.itens?.length || 0,
-      valor_total: v.valor_total?.toFixed(2),
-      desconto: v.desconto?.toFixed(2) || "0.00",
-      valor_final: (v.valor_final || v.valor_total)?.toFixed(2),
+      valor_total: formatPrice(v.valor_total),
+      desconto: formatPrice(v.desconto),
+      valor_final: formatPrice(v.valor_final || v.valor_total || 0),
     }));
     exportToCSV(data, "relatorio_vendas", ["Data", "Cliente", "Itens", "Valor_Total", "Desconto", "Valor_Final"]);
   };
@@ -135,8 +142,8 @@ export default function Relatorios() {
       nome: p.nome,
       marca: p.marca || "",
       volume: p.volume || "",
-      preco_custo: p.preco_custo?.toFixed(2),
-      preco_venda: p.preco_venda?.toFixed(2),
+      preco_custo: formatPrice(p.preco_custo),
+      preco_venda: formatPrice(p.preco_venda),
       estoque_atual: p.estoque_atual || 0,
     }));
     exportToCSV(data, "relatorio_produtos", ["Nome", "Marca", "Volume", "Preco_Custo", "Preco_Venda", "Estoque_Atual"]);
@@ -155,7 +162,7 @@ export default function Relatorios() {
 
   // Estatísticas de vendas
   const totalVendas = filteredVendas.length;
-  const valorTotal = filteredVendas.reduce((acc, v) => acc + (v.valor_final || v.valor_total || 0), 0);
+  const valorTotal = filteredVendas.reduce((acc, v) => acc + parseFloat(v.valor_final || v.valor_total || 0), 0);
   const ticketMedio = totalVendas > 0 ? valorTotal / totalVendas : 0;
 
   const isLoading = loadingVendas || loadingClientes || loadingProdutos || loadingFornecedores;
@@ -210,7 +217,7 @@ export default function Relatorios() {
             </div>
             <div>
               <p className="text-sm text-gray-500">Receita Total</p>
-              <p className="text-2xl font-bold">R$ {valorTotal.toFixed(2)}</p>
+              <p className="text-2xl font-bold">R$ {formatPrice(valorTotal)}</p>
             </div>
           </CardContent>
         </Card>
@@ -221,7 +228,7 @@ export default function Relatorios() {
             </div>
             <div>
               <p className="text-sm text-gray-500">Ticket Médio</p>
-              <p className="text-2xl font-bold">R$ {ticketMedio.toFixed(2)}</p>
+              <p className="text-2xl font-bold">R$ {formatPrice(ticketMedio)}</p>
             </div>
           </CardContent>
         </Card>
@@ -275,9 +282,9 @@ export default function Relatorios() {
                       <TableCell>{format(new Date(venda.created_at), "dd/MM/yyyy HH:mm")}</TableCell>
                       <TableCell>{venda.cliente_nome || "Venda Avulsa"}</TableCell>
                       <TableCell>{venda.itens?.length || 0}</TableCell>
-                      <TableCell>R$ {(venda.desconto || 0).toFixed(2)}</TableCell>
+                      <TableCell>R$ {formatPrice(venda.desconto || 0)}</TableCell>
                       <TableCell className="text-right font-semibold">
-                        R$ {(venda.valor_final || venda.valor_total || 0).toFixed(2)}
+                        R$ {formatPrice(venda.valor_final || venda.valor_total || 0)}
                       </TableCell>
                     </TableRow>
                   ))}
@@ -353,8 +360,8 @@ export default function Relatorios() {
                     <TableRow key={produto.id}>
                       <TableCell className="font-medium">{produto.nome}</TableCell>
                       <TableCell>{produto.marca || "-"}</TableCell>
-                      <TableCell>R$ {produto.preco_custo?.toFixed(2)}</TableCell>
-                      <TableCell>R$ {produto.preco_venda?.toFixed(2)}</TableCell>
+                      <TableCell>R$ {formatPrice(produto.preco_custo)}</TableCell>
+                      <TableCell>R$ {formatPrice(produto.preco_venda)}</TableCell>
                       <TableCell className="text-right">{produto.estoque_atual || 0}</TableCell>
                     </TableRow>
                   ))}
@@ -401,4 +408,6 @@ export default function Relatorios() {
       </Tabs>
     </div>
   );
-}
+};
+
+export default Relatorios;
