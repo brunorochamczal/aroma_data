@@ -2,6 +2,51 @@ import { query } from '../config/database.js';
 import { Produto } from './Produto.js';
 
 export const Venda = {
+  // LISTAR todas as vendas
+  async findAll() {
+    try {
+      const result = await query(
+        'SELECT * FROM vendas ORDER BY created_at DESC'
+      );
+      
+      // Buscar itens de cada venda
+      for (const venda of result.rows) {
+        const itensResult = await query(
+          'SELECT * FROM venda_itens WHERE venda_id = $1',
+          [venda.id]
+        );
+        venda.itens = itensResult.rows;
+      }
+      
+      return result.rows;
+    } catch (error) {
+      console.error('❌ Erro em Venda.findAll:', error);
+      throw error;
+    }
+  },
+
+  // BUSCAR por ID
+  async findById(id) {
+    try {
+      const vendaResult = await query('SELECT * FROM vendas WHERE id = $1', [id]);
+      const venda = vendaResult.rows[0];
+      
+      if (venda) {
+        const itensResult = await query(
+          'SELECT * FROM venda_itens WHERE venda_id = $1',
+          [id]
+        );
+        venda.itens = itensResult.rows;
+      }
+      
+      return venda;
+    } catch (error) {
+      console.error('❌ Erro em Venda.findById:', error);
+      throw error;
+    }
+  },
+
+  // CRIAR venda
   async create(data) {
     const { 
       cliente_id, cliente_nome, itens, valor_total, 
@@ -42,86 +87,22 @@ export const Venda = {
       return venda;
     } catch (error) {
       await query('ROLLBACK');
+      console.error('❌ Erro em Venda.create:', error);
       throw error;
     }
   },
 
-  async findAll(filters = {}) {
-    let sql = 'SELECT * FROM vendas WHERE cancelada = false';
-    const values = [];
-    let index = 1;
-
-    if (filters.startDate) {
-      sql += ` AND created_date >= $${index}`;
-      values.push(filters.startDate);
-      index++;
-    }
-
-    if (filters.endDate) {
-      sql += ` AND created_date <= $${index}`;
-      values.push(filters.endDate);
-      index++;
-    }
-
-    if (filters.cliente_id) {
-      sql += ` AND cliente_id = $${index}`;
-      values.push(filters.cliente_id);
-      index++;
-    }
-
-    sql += ' ORDER BY created_date DESC';
-    
-    const result = await query(sql, values);
-    
-    // Busca os itens de cada venda
-    for (const venda of result.rows) {
-      const itensResult = await query('SELECT * FROM venda_itens WHERE venda_id = $1', [venda.id]);
-      venda.itens = itensResult.rows;
-    }
-    
-    return result.rows;
-  },
-
-  async findById(id) {
-    const vendaResult = await query('SELECT * FROM vendas WHERE id = $1', [id]);
-    const venda = vendaResult.rows[0];
-    
-    if (venda) {
-      const itensResult = await query('SELECT * FROM venda_itens WHERE venda_id = $1', [id]);
-      venda.itens = itensResult.rows;
-    }
-    
-    return venda;
-  },
-
-  async cancel(id) {
-    // Inicia transação
-    await query('BEGIN');
-    
+  // EXCLUIR venda (DELETE REAL)
+  async delete(id) {
     try {
-      // Busca a venda com itens
-      const venda = await this.findById(id);
+      // Primeiro deletar os itens da venda
+      await query('DELETE FROM venda_itens WHERE venda_id = $1', [id]);
       
-      if (!venda || venda.cancelada) {
-        await query('ROLLBACK');
-        return null;
-      }
-      
-      // Restaura estoque de cada item
-      for (const item of venda.itens) {
-        await Produto.updateStock(item.produto_id, item.quantidade, 'add');
-      }
-      
-      // Marca venda como cancelada
-      const result = await query(
-        'UPDATE vendas SET cancelada = true, updated_at = NOW() WHERE id = $1 RETURNING *',
-        [id]
-      );
-      
-      await query('COMMIT');
+      // Depois deletar a venda
+      const result = await query('DELETE FROM vendas WHERE id = $1 RETURNING *', [id]);
       return result.rows[0];
     } catch (error) {
-      await query('ROLLBACK');
+      console.error('❌ Erro em Venda.delete:', error);
       throw error;
     }
   }
