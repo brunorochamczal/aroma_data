@@ -34,28 +34,31 @@ export default function Relatorios() {
     queryKey: ['vendas-relatorio'],
     queryFn: async () => {
       const response = await aroma.vendas.listar();
-      return response.slice(0, 1000); // Limitar a 1000 registros
+      return response;
     },
   });
 
   const { data: clientes = [], isLoading: loadingClientes } = useQuery({
     queryKey: ['clientes-relatorio'],
     queryFn: async () => {
-      return await aroma.clientes.listar();
+      const response = await aroma.clientes.listar();
+      return response;
     },
   });
 
   const { data: produtos = [], isLoading: loadingProdutos } = useQuery({
     queryKey: ['produtos-relatorio'],
     queryFn: async () => {
-      return await aroma.produtos.listar();
+      const response = await aroma.produtos.listar();
+      return response;
     },
   });
 
   const { data: fornecedores = [], isLoading: loadingFornecedores } = useQuery({
     queryKey: ['fornecedores-relatorio'],
     queryFn: async () => {
-      return await aroma.fornecedores.listar();
+      const response = await aroma.fornecedores.listar();
+      return response;
     },
   });
 
@@ -79,7 +82,7 @@ export default function Relatorios() {
   const filteredVendas = vendas.filter(v => {
     if (v.cancelada) return false;
     const { start, end } = getDateRange();
-    const vendaDate = new Date(v.created_date);
+    const vendaDate = new Date(v.created_at);
     return vendaDate >= start && vendaDate <= end;
   });
 
@@ -104,7 +107,7 @@ export default function Relatorios() {
 
   const exportVendas = () => {
     const data = filteredVendas.map(v => ({
-      data: format(new Date(v.created_date), "dd/MM/yyyy HH:mm"),
+      data: format(new Date(v.created_at), "dd/MM/yyyy HH:mm"),
       cliente: v.cliente_nome || "Venda Avulsa",
       itens: v.itens?.length || 0,
       valor_total: v.valor_total?.toFixed(2),
@@ -115,7 +118,7 @@ export default function Relatorios() {
   };
 
   const exportClientes = () => {
-    const data = clientes.filter(c => c.ativo !== false).map(c => ({
+    const data = clientes.map(c => ({
       nome: c.nome,
       cpf: c.cpf || "",
       telefone: c.telefone || "",
@@ -126,7 +129,7 @@ export default function Relatorios() {
   };
 
   const exportProdutos = () => {
-    const data = produtos.filter(p => p.ativo !== false).map(p => ({
+    const data = produtos.map(p => ({
       nome: p.nome,
       marca: p.marca || "",
       volume: p.volume || "",
@@ -138,7 +141,7 @@ export default function Relatorios() {
   };
 
   const exportFornecedores = () => {
-    const data = fornecedores.filter(f => f.ativo !== false).map(f => ({
+    const data = fornecedores.map(f => ({
       nome: f.nome,
       cnpj: f.cnpj || "",
       telefone: f.telefone || "",
@@ -266,7 +269,7 @@ export default function Relatorios() {
                 <TableBody>
                   {filteredVendas.slice(0, 10).map((venda) => (
                     <TableRow key={venda.id}>
-                      <TableCell>{format(new Date(venda.created_date), "dd/MM/yyyy HH:mm")}</TableCell>
+                      <TableCell>{format(new Date(venda.created_at), "dd/MM/yyyy HH:mm")}</TableCell>
                       <TableCell>{venda.cliente_nome || "Venda Avulsa"}</TableCell>
                       <TableCell>{venda.itens?.length || 0}</TableCell>
                       <TableCell>R$ {(venda.desconto || 0).toFixed(2)}</TableCell>
@@ -307,7 +310,7 @@ export default function Relatorios() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {clientes.filter(c => c.ativo !== false).slice(0, 10).map((cliente) => (
+                  {clientes.slice(0, 10).map((cliente) => (
                     <TableRow key={cliente.id}>
                       <TableCell className="font-medium">{cliente.nome}</TableCell>
                       <TableCell>{cliente.cpf || "-"}</TableCell>
@@ -343,7 +346,7 @@ export default function Relatorios() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {produtos.filter(p => p.ativo !== false).slice(0, 10).map((produto) => (
+                  {produtos.slice(0, 10).map((produto) => (
                     <TableRow key={produto.id}>
                       <TableCell className="font-medium">{produto.nome}</TableCell>
                       <TableCell>{produto.marca || "-"}</TableCell>
@@ -379,7 +382,7 @@ export default function Relatorios() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {fornecedores.filter(f => f.ativo !== false).slice(0, 10).map((fornecedor) => (
+                  {fornecedores.slice(0, 10).map((fornecedor) => (
                     <TableRow key={fornecedor.id}>
                       <TableCell className="font-medium">{fornecedor.nome}</TableCell>
                       <TableCell>{fornecedor.cnpj || "-"}</TableCell>
