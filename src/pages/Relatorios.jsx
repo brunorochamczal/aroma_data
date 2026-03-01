@@ -32,11 +32,12 @@ const Relatorios = () => {
   
   const [periodo, setPeriodo] = useState("mes_atual");
 
+  // GARANTIR QUE TODOS OS DADOS SÃO ARRAYS
   const { data: vendas = [], isLoading: loadingVendas } = useQuery({
     queryKey: ['vendas-relatorio'],
     queryFn: async () => {
       const response = await aroma.vendas.listar();
-      return response;
+      return Array.isArray(response) ? response : [];
     },
   });
 
@@ -44,7 +45,7 @@ const Relatorios = () => {
     queryKey: ['clientes-relatorio'],
     queryFn: async () => {
       const response = await aroma.clientes.listar();
-      return response;
+      return Array.isArray(response) ? response : [];
     },
   });
 
@@ -52,7 +53,7 @@ const Relatorios = () => {
     queryKey: ['produtos-relatorio'],
     queryFn: async () => {
       const response = await aroma.produtos.listar();
-      return response;
+      return Array.isArray(response) ? response : [];
     },
   });
 
@@ -60,7 +61,7 @@ const Relatorios = () => {
     queryKey: ['fornecedores-relatorio'],
     queryFn: async () => {
       const response = await aroma.fornecedores.listar();
-      return response;
+      return Array.isArray(response) ? response : [];
     },
   });
 
@@ -88,14 +89,19 @@ const Relatorios = () => {
     }
   };
 
-  const filteredVendas = vendas.filter(v => {
-    if (v.cancelada) return false;
+  const filteredVendas = Array.isArray(vendas) ? vendas.filter(v => {
+    if (v?.cancelada) return false;
     const { start, end } = getDateRange();
-    const vendaDate = new Date(v.created_at);
+    const vendaDate = new Date(v?.created_at);
     return vendaDate >= start && vendaDate <= end;
-  });
+  }) : [];
 
   const exportToCSV = (data, filename, headers) => {
+    if (!Array.isArray(data) || data.length === 0) {
+      toast.error("Não há dados para exportar");
+      return;
+    }
+
     const csvContent = [
       headers.join(","),
       ...data.map(row => headers.map(h => {
