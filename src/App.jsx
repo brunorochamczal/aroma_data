@@ -8,7 +8,31 @@ import PageNotFound from './lib/PageNotFound';
 import { AuthProvider, useAuth } from '@/lib/AuthContext';
 import Login from './pages/Login';
 
+
+
+
+
+
+
 const { Pages, Layout, mainPage } = pagesConfig;
+
+
+// Isso cria as rotas para cada página
+{Object.entries(Pages).map(([path, Page]) => (
+  <Route
+    key={path}
+    path={`/${path}`}
+    element={
+      <PrivateRoute>
+        <LayoutWrapper currentPageName={path}>
+          <Page />
+        </LayoutWrapper>
+      </PrivateRoute>
+    }
+  />
+))}
+
+
 const mainPageKey = mainPage ?? Object.keys(Pages)[0];
 const MainPage = mainPageKey ? Pages[mainPageKey] : <></>;
 
