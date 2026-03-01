@@ -4,7 +4,7 @@
   <img src="./aroma.png" alt="Dashboard" width="300"/>
 </p>
 
-## 🚀 **Sistema Completo de Gestão para Perfumarias**
+## 🚀 **Organiza toda a gestão das vendas do vendedor autônomo**
 
 O **Aroma Data** é um sistema de gestão empresarial desenvolvido especialmente para lojas de perfumaria e cosméticos. Com uma interface moderna e intuitiva, oferece todas as ferramentas necessárias para administrar seu negócio de forma eficiente.
 
