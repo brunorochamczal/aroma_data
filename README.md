@@ -100,21 +100,19 @@ O **Aroma Data** é um sistema de gestão desenvolvido especialmente para vended
 
 🔗 [https://aroma-data.onrender.com](https://aroma-data.onrender.com) 
 
-### **Credenciais para Teste**
+### **Para testar**
 
-| Perfil | Email | Senha |
-|--------|-------|-------|
-| 👤 **Usuário Comum** | teste@aromadata.com | 123456 |
-
----
+Entre em contato com o administrador do sistema.
 
 ## 📸 **Capturas de Tela**
 
 *(Adicione aqui prints do sistema)*
 
+
+
 | Dashboard | Vendas | Relatórios |
 |-----------|--------|------------|
-| ![Dashboard](https://via.placeholder.com/300x200/9c27b0/ffffff?text=Dashboard) | ![Vendas](https://via.placeholder.com/300x200/ff9800/ffffff?text=Vendas) | ![Relatórios](https://via.placeholder.com/300x200/4caf50/ffffff?text=Relatórios) |
+
 
 ---
 
