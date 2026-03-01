@@ -1,7 +1,6 @@
-import React, { useState, useEffect } from "react";
-import { Link } from "react-router-dom";
+import React, { useState } from "react";
+import { Link, useLocation } from "react-router-dom";
 import { createPageUrl } from "@/lib/utils";
-import { aroma } from "@/api/aromaClient";
 import { 
   LayoutDashboard, 
   Users, 
@@ -12,7 +11,9 @@ import {
   Menu,
   X,
   LogOut,
-  ChevronDown
+  ChevronDown,
+  Flower2,
+  UserCog
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -21,25 +22,43 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import LowStockNotifications from "@/components/notifications/LowStockNotifications";
+import { useAuth } from '@/lib/AuthContext';
 import NotificationBell from "@/components/notifications/NotificationBell";
-import { useAuth } from '@/lib/AuthContext';  // NOVO - usar nosso contexto
 
-const navItems = [
-  { name: "Dashboard", page: "Dashboard", icon: LayoutDashboard },
-  { name: "Vendas", page: "Vendas", icon: ShoppingCart },
-  { name: "Produtos", page: "Produtos", icon: Package },
-  { name: "Clientes", page: "Clientes", icon: Users },
-  { name: "Fornecedores", page: "Fornecedores", icon: Truck },
-  { name: "Relatórios", page: "Relatorios", icon: FileText },
-];
-
-export default function Layout({ children, currentPageName }) {
+const Layout = ({ children }) => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const { user, logout } = useAuth();  // NOVO - usar o contexto
+  const { user, logout } = useAuth();
+  const location = useLocation();
+  
+  // Determinar a página atual baseada na URL
+  const currentPath = location.pathname.replace('/', '') || 'Dashboard';
+  
+  // Itens de navegação base
+  const baseNavItems = [
+    { name: "Dashboard", page: "Dashboard", icon: LayoutDashboard },
+    { name: "Vendas", page: "Vendas", icon: ShoppingCart },
+    { name: "Produtos", page: "Produtos", icon: Package },
+    { name: "Clientes", page: "Clientes", icon: Users },
+    { name: "Fornecedores", page: "Fornecedores", icon: Truck },
+    { name: "Relatórios", page: "Relatorios", icon: FileText },
+  ];
+
+  // Adicionar item de Gerenciar Usuários apenas para admin
+  const navItems = [...baseNavItems];
+  if (user?.isAdmin) {
+    navItems.push({ 
+      name: "Gerenciar Usuários", 
+      page: "GerenciarUsuarios", 
+      icon: UserCog 
+    });
+  }
 
   const handleLogout = () => {
-    logout();  // NOVO - usar função do contexto
+    logout();
+  };
+
+  const toggleSidebar = () => {
+    setSidebarOpen(!sidebarOpen);
   };
 
   return (
@@ -59,11 +78,9 @@ export default function Layout({ children, currentPageName }) {
       `}>
         {/* Logo */}
         <div className="h-16 flex items-center gap-2 px-4 border-b border-[#e8c9bc]">
-          <img 
-             
-            alt="Aroma Data" 
-            className="h-10 w-10 object-contain" 
-          />
+          <div className="w-10 h-10 rounded-lg bg-gradient-to-r from-purple-600 to-violet-600 flex items-center justify-center">
+            <Flower2 className="h-6 w-6 text-white" />
+          </div>
           <span className="font-semibold text-[#4a3728]">Aroma Data</span>
         </div>
 
@@ -71,7 +88,7 @@ export default function Layout({ children, currentPageName }) {
         <nav className="p-4 space-y-1">
           {navItems.map((item) => {
             const Icon = item.icon;
-            const isActive = currentPageName === item.page;
+            const isActive = currentPath === item.page;
             
             return (
               <Link
@@ -94,17 +111,18 @@ export default function Layout({ children, currentPageName }) {
         </nav>
 
         {/* User info - Desktop */}
-        <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-[#e8c9bc]">
+        <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-[#e8c9bc] bg-white/50 backdrop-blur-sm">
           <div className="flex items-center gap-3">
             <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#C4967A] to-[#b07e63] flex items-center justify-center text-white text-sm font-medium">
-              {user?.full_name?.[0] || user?.name?.[0] || "U"}
+              {user?.name?.[0] || user?.email?.[0] || "U"}
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium text-[#4a3728] truncate">
-                {user?.full_name || user?.name || "Usuário"}
+                {user?.name || "Usuário"}
               </p>
               <p className="text-xs text-[#C4967A] truncate">
                 {user?.email || ""}
+                {user?.isAdmin && <span className="ml-1 text-xs bg-purple-100 text-purple-700 px-1 rounded">Admin</span>}
               </p>
             </div>
             <Button 
@@ -112,6 +130,7 @@ export default function Layout({ children, currentPageName }) {
               size="icon"
               onClick={handleLogout}
               className="text-[#C4967A] hover:text-red-600"
+              title="Sair"
             >
               <LogOut className="h-5 w-5" />
             </Button>
@@ -125,17 +144,15 @@ export default function Layout({ children, currentPageName }) {
           <Button 
             variant="ghost" 
             size="icon"
-            onClick={() => setSidebarOpen(!sidebarOpen)}
+            onClick={toggleSidebar}
             className="text-[#C4967A]"
           >
             {sidebarOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
           </Button>
           <div className="flex items-center gap-2">
-            <img 
-              src="/aroma.png" 
-              alt="Aroma Data" 
-              className="h-10 w-10 object-contain" 
-            />
+            <div className="w-10 h-10 rounded-lg bg-gradient-to-r from-purple-600 to-violet-600 flex items-center justify-center">
+              <Flower2 className="h-6 w-6 text-white" />
+            </div>
             <span className="font-semibold text-[#4a3728]">Aroma Data</span>
           </div>
         </div>
@@ -146,12 +163,16 @@ export default function Layout({ children, currentPageName }) {
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" className="flex items-center gap-2">
                 <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#C4967A] to-[#b07e63] flex items-center justify-center text-white text-sm font-medium">
-                  {user?.full_name?.[0] || user?.name?.[0] || "U"}
+                  {user?.name?.[0] || user?.email?.[0] || "U"}
                 </div>
                 <ChevronDown className="h-4 w-4 text-gray-500" />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-48">
+              <div className="px-2 py-1.5 text-sm text-gray-500 border-b">
+                {user?.email}
+                {user?.isAdmin && <span className="ml-1 text-xs bg-purple-100 text-purple-700 px-1 rounded">Admin</span>}
+              </div>
               <DropdownMenuItem asChild>
                 <Link to={createPageUrl("Profile")} className="cursor-pointer">
                   Perfil
@@ -176,10 +197,20 @@ export default function Layout({ children, currentPageName }) {
         min-h-screen transition-all duration-300 ease-in-out
         lg:ml-64 pt-16 lg:pt-0
       `}>
-        <div className="p-6">
+        <div className="p-4 md:p-6">
           {children}
         </div>
       </main>
+
+      {/* Overlay para mobile quando sidebar está aberta */}
+      {sidebarOpen && (
+        <div 
+          className="fixed inset-0 bg-black/20 backdrop-blur-sm z-30 lg:hidden"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
     </div>
   );
-}
+};
+
+export default Layout;
