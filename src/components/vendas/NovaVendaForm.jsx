@@ -5,7 +5,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
-import { Loader2, Plus, Trash2, Search } from "lucide-react";
+import { 
+  Loader2, Plus, Trash2, Search, User, Package, 
+  ShoppingCart, X, Check, AlertCircle 
+} from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -13,29 +16,39 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
 
 const NovaVendaForm = ({ onSuccess, onCancel }) => {
-  const [clienteId, setClienteId] = useState("cliente_avulso");
-  const [clienteNome, setClienteNome] = useState("");
+  // Estados
+  const [clienteSelecionado, setClienteSelecionado] = useState(null);
+  const [clienteNomeAvulso, setClienteNomeAvulso] = useState("");
   const [itens, setItens] = useState([]);
-  const [produtoSelecionado, setProdutoSelecionado] = useState("");
+  const [produtoSelecionado, setProdutoSelecionado] = useState(null);
   const [quantidade, setQuantidade] = useState(1);
   const [searchTerm, setSearchTerm] = useState("");
-  const [produtosFiltrados, setProdutosFiltrados] = useState([]);
+  const [modoAvulso, setModoAvulso] = useState(false);
 
   // Buscar produtos
   const { data: produtos = [], isLoading: loadingProdutos } = useQuery({
     queryKey: ['produtos-venda'],
     queryFn: async () => {
       const response = await aroma.produtos.listar();
-      const produtosArray = Array.isArray(response) ? response : [];
-      return produtosArray.filter(p => p?.ativo !== false && (p?.estoque_atual || 0) > 0);
+      return Array.isArray(response) ? response : [];
     },
   });
 
   // Buscar clientes
-  const { data: clientes = [] } = useQuery({
+  const { data: clientes = [], isLoading: loadingClientes } = useQuery({
     queryKey: ['clientes-venda'],
     queryFn: async () => {
       const response = await aroma.clientes.listar();
@@ -43,25 +56,12 @@ const NovaVendaForm = ({ onSuccess, onCancel }) => {
     },
   });
 
-  // Efeito para filtrar produtos quando searchTerm ou produtos mudam
-  useEffect(() => {
-    if (!searchTerm.trim()) {
-      setProdutosFiltrados(produtos);
-    } else {
-      const filtered = produtos.filter(p => 
-        p.nome?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        p.marca?.toLowerCase().includes(searchTerm.toLowerCase())
-      );
-      setProdutosFiltrados(filtered);
-    }
-  }, [searchTerm, produtos]);
-
   const criarVendaMutation = useMutation({
     mutationFn: async (dados) => {
       return await aroma.vendas.criar(dados);
     },
     onSuccess: () => {
-      toast.success("Venda registrada com sucesso!");
+      toast.success("✅ Venda realizada com sucesso!");
       onSuccess();
     },
     onError: (error) => {
@@ -70,10 +70,20 @@ const NovaVendaForm = ({ onSuccess, onCancel }) => {
     },
   });
 
+  // Filtrar produtos disponíveis (com estoque)
+  const produtosDisponiveis = produtos.filter(p => 
+    p?.ativo !== false && (p?.estoque_atual || 0) > 0
+  );
+
+  // Filtrar produtos pela busca
+  const produtosFiltrados = produtosDisponiveis.filter(p => 
+    p.nome?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    p.marca?.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
   const formatPrice = (value) => {
-    if (value === null || value === undefined || value === '') return '0.00';
-    const num = parseFloat(value);
-    return isNaN(num) ? '0.00' : num.toFixed(2);
+    const num = parseFloat(value) || 0;
+    return num.toFixed(2);
   };
 
   const adicionarItem = () => {
@@ -82,37 +92,58 @@ const NovaVendaForm = ({ onSuccess, onCancel }) => {
       return;
     }
 
-    if (!quantidade || quantidade < 1) {
+    if (quantidade < 1) {
       toast.error("Quantidade inválida");
       return;
     }
 
-    const produto = produtos.find(p => p.id === produtoSelecionado);
-    if (!produto) return;
-
-    if ((produto.estoque_atual || 0) < quantidade) {
-      toast.error(`Estoque insuficiente. Disponível: ${produto.estoque_atual || 0}`);
+    if (produtoSelecionado.estoque_atual < quantidade) {
+      toast.error(`Estoque insuficiente. Disponível: ${produtoSelecionado.estoque_atual}`);
       return;
     }
 
-    const precoUnitario = parseFloat(produto.preco_venda) || 0;
-    const subtotal = precoUnitario * parseInt(quantidade);
+    // Verificar se o produto já está na lista
+    const itemExistente = itens.find(item => item.produto_id === produtoSelecionado.id);
+    
+    if (itemExistente) {
+      // Se já existe, pergunta se quer adicionar mais
+      if (confirm(`Produto já adicionado. Deseja adicionar mais ${quantidade} unidades?`)) {
+        const novosItens = itens.map(item => 
+          item.produto_id === produtoSelecionado.id
+            ? { 
+                ...item, 
+                quantidade: item.quantidade + quantidade,
+                subtotal: (item.quantidade + quantidade) * item.preco_unitario
+              }
+            : item
+        );
+        setItens(novosItens);
+      }
+    } else {
+      // Adicionar novo item
+      const novoItem = {
+        produto_id: produtoSelecionado.id,
+        produto_nome: produtoSelecionado.nome,
+        produto_marca: produtoSelecionado.marca,
+        quantidade: quantidade,
+        preco_unitario: parseFloat(produtoSelecionado.preco_venda) || 0,
+        subtotal: (parseFloat(produtoSelecionado.preco_venda) || 0) * quantidade
+      };
+      setItens([...itens, novoItem]);
+    }
 
-    setItens([...itens, {
-      produto_id: produto.id,
-      produto_nome: produto.nome,
-      quantidade: parseInt(quantidade),
-      preco_unitario: precoUnitario,
-      subtotal: subtotal
-    }]);
-
-    setProdutoSelecionado("");
+    // Limpar seleção
+    setProdutoSelecionado(null);
     setQuantidade(1);
     setSearchTerm("");
   };
 
   const removerItem = (index) => {
     setItens(itens.filter((_, i) => i !== index));
+  };
+
+  const calcularTotal = () => {
+    return itens.reduce((acc, item) => acc + (item.subtotal || 0), 0);
   };
 
   const handleSubmit = (e) => {
@@ -123,159 +154,232 @@ const NovaVendaForm = ({ onSuccess, onCancel }) => {
       return;
     }
 
-    const valorTotal = itens.reduce((acc, item) => acc + (item.subtotal || 0), 0);
-    
-    // Determinar nome do cliente
-    let nomeCliente = "Venda Avulsa";
-    if (clienteId && clienteId !== "cliente_avulso") {
-      const clienteSelecionado = clientes.find(c => c.id === clienteId);
-      nomeCliente = clienteSelecionado?.nome || "Venda Avulsa";
-    } else if (clienteNome.trim()) {
-      nomeCliente = clienteNome.trim();
+    if (!clienteSelecionado && !clienteNomeAvulso.trim() && !modoAvulso) {
+      toast.error("Selecione um cliente ou informe o nome para venda avulsa");
+      return;
     }
 
     const vendaData = {
-      cliente_id: clienteId !== "cliente_avulso" ? clienteId : null,
-      cliente_nome: nomeCliente,
+      cliente_id: clienteSelecionado?.id || null,
+      cliente_nome: clienteSelecionado?.nome || clienteNomeAvulso || "Venda Avulsa",
       itens: itens.map(item => ({
-        ...item,
-        preco_unitario: parseFloat(item.preco_unitario) || 0,
-        subtotal: parseFloat(item.subtotal) || 0
+        produto_id: item.produto_id,
+        produto_nome: item.produto_nome,
+        quantidade: item.quantidade,
+        preco_unitario: item.preco_unitario,
+        subtotal: item.subtotal
       })),
-      valor_total: parseFloat(valorTotal) || 0,
-      valor_final: parseFloat(valorTotal) || 0,
+      valor_total: calcularTotal(),
+      valor_final: calcularTotal(),
       created_at: new Date().toISOString(),
     };
 
     criarVendaMutation.mutate(vendaData);
   };
 
-  if (loadingProdutos) {
+  const selecionarCliente = (cliente) => {
+    setClienteSelecionado(cliente);
+    setClienteNomeAvulso("");
+    setModoAvulso(false);
+  };
+
+  const ativarModoAvulso = () => {
+    setClienteSelecionado(null);
+    setModoAvulso(true);
+  };
+
+  if (loadingProdutos || loadingClientes) {
     return (
-      <div className="flex justify-center py-8">
+      <div className="flex justify-center items-center h-64">
         <Loader2 className="h-8 w-8 animate-spin text-purple-600" />
+        <span className="ml-2">Carregando...</span>
       </div>
     );
   }
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
-      {/* Seleção de Cliente */}
-      <div className="space-y-2">
-        <Label htmlFor="cliente">Cliente</Label>
-        <Select value={clienteId} onValueChange={setClienteId}>
-          <SelectTrigger className="w-full">
-            <SelectValue placeholder="Selecione um cliente">
-              {clienteId === "cliente_avulso" ? "Venda Avulsa" : 
-               clientes.find(c => c.id === clienteId)?.nome || "Selecione um cliente"}
-            </SelectValue>
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="cliente_avulso">Venda Avulsa</SelectItem>
-            {clientes.map((cliente) => (
-              <SelectItem key={cliente.id} value={cliente.id}>
-                {cliente.nome}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        
-        {/* Campo para cliente não cadastrado */}
-        {clienteId === "cliente_avulso" && (
-          <div className="mt-2">
-            <Label htmlFor="cliente_nome">Nome do cliente (não cadastrado)</Label>
-            <Input
-              id="cliente_nome"
-              value={clienteNome}
-              onChange={(e) => setClienteNome(e.target.value)}
-              placeholder="Digite o nome do cliente"
-              className="mt-1"
-            />
-          </div>
-        )}
-      </div>
-
-      {/* Busca de Produtos */}
-      <div className="space-y-2">
-        <Label>Buscar Produtos</Label>
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-          <Input
-            placeholder="Digite para buscar produtos..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-10"
-          />
-        </div>
-        {searchTerm && produtosFiltrados.length === 0 && (
-          <p className="text-sm text-amber-600 mt-1">
-            Nenhum produto encontrado com "{searchTerm}"
-          </p>
-        )}
-      </div>
-
-      {/* Adicionar Itens */}
-      <Card>
+      {/* SEÇÃO: Cliente */}
+      <Card className="border-2 border-purple-100">
         <CardContent className="pt-6">
-          <h3 className="font-semibold mb-4">Adicionar Itens</h3>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="col-span-1">
-              <Label>Produto</Label>
-              <Select
-                value={produtoSelecionado}
-                onValueChange={setProdutoSelecionado}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione um produto" />
-                </SelectTrigger>
-                <SelectContent>
-                  {produtosFiltrados.map((produto) => (
-                    <SelectItem key={produto.id} value={produto.id}>
-                      {produto.nome} - R$ {formatPrice(produto.preco_venda)} 
-                      {produto.marca && ` (${produto.marca})`}
-                      {produto.estoque_atual > 0 && ` - Estoque: ${produto.estoque_atual}`}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="col-span-1">
-              <Label>Quantidade</Label>
-              <Input
-                type="number"
-                min="1"
-                value={quantidade}
-                onChange={(e) => setQuantidade(parseInt(e.target.value) || 1)}
-                disabled={!produtoSelecionado}
-              />
-            </div>
-            <div className="col-span-1 flex items-end">
+          <div className="flex items-center gap-2 mb-4">
+            <User className="h-5 w-5 text-purple-600" />
+            <h2 className="text-lg font-semibold">Cliente</h2>
+          </div>
+
+          <div className="space-y-4">
+            {/* Lista de clientes em grid */}
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
               <Button
                 type="button"
-                onClick={adicionarItem}
-                disabled={!produtoSelecionado}
-                className="w-full bg-gradient-to-r from-purple-600 to-violet-600"
+                variant={modoAvulso ? "default" : "outline"}
+                className={`justify-start ${modoAvulso ? 'bg-purple-600 text-white' : ''}`}
+                onClick={ativarModoAvulso}
               >
-                <Plus className="h-4 w-4 mr-2" />
-                Adicionar
+                <User className="h-4 w-4 mr-2" />
+                Venda Avulsa
               </Button>
+              
+              {clientes.slice(0, 5).map((cliente) => (
+                <Button
+                  key={cliente.id}
+                  type="button"
+                  variant={clienteSelecionado?.id === cliente.id ? "default" : "outline"}
+                  className={`justify-start ${clienteSelecionado?.id === cliente.id ? 'bg-purple-600 text-white' : ''}`}
+                  onClick={() => selecionarCliente(cliente)}
+                >
+                  <User className="h-4 w-4 mr-2" />
+                  <span className="truncate">{cliente.nome}</span>
+                </Button>
+              ))}
             </div>
+
+            {/* Campo para nome avulso */}
+            {modoAvulso && (
+              <div className="mt-4 p-4 bg-purple-50 rounded-lg">
+                <Label htmlFor="cliente_nome">Nome do cliente</Label>
+                <Input
+                  id="cliente_nome"
+                  value={clienteNomeAvulso}
+                  onChange={(e) => setClienteNomeAvulso(e.target.value)}
+                  placeholder="Digite o nome do cliente"
+                  className="mt-1 bg-white"
+                  autoFocus
+                />
+              </div>
+            )}
           </div>
         </CardContent>
       </Card>
 
-      {/* Lista de Itens */}
+      {/* SEÇÃO: Produtos */}
+      <Card className="border-2 border-purple-100">
+        <CardContent className="pt-6">
+          <div className="flex items-center gap-2 mb-4">
+            <Package className="h-5 w-5 text-purple-600" />
+            <h2 className="text-lg font-semibold">Produtos</h2>
+          </div>
+
+          {/* Busca */}
+          <div className="relative mb-4">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+            <Input
+              placeholder="Buscar produtos por nome ou marca..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-10"
+            />
+          </div>
+
+          {/* Grid de produtos */}
+          {searchTerm ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-2 max-h-60 overflow-y-auto p-2 border rounded-lg">
+              {produtosFiltrados.length > 0 ? (
+                produtosFiltrados.map((produto) => (
+                  <Button
+                    key={produto.id}
+                    type="button"
+                    variant="outline"
+                    className={`justify-start h-auto p-3 ${
+                      produtoSelecionado?.id === produto.id ? 'border-2 border-purple-600 bg-purple-50' : ''
+                    }`}
+                    onClick={() => setProdutoSelecionado(produto)}
+                  >
+                    <div className="flex-1 text-left">
+                      <p className="font-medium">{produto.nome}</p>
+                      <p className="text-sm text-gray-500">
+                        {produto.marca} • R$ {formatPrice(produto.preco_venda)}
+                      </p>
+                      <Badge variant="outline" className="mt-1">
+                        Estoque: {produto.estoque_atual}
+                      </Badge>
+                    </div>
+                    {produtoSelecionado?.id === produto.id && (
+                      <Check className="h-4 w-4 text-purple-600 ml-2" />
+                    )}
+                  </Button>
+                ))
+              ) : (
+                <p className="text-center text-gray-500 py-4 col-span-2">
+                  Nenhum produto encontrado
+                </p>
+              )}
+            </div>
+          ) : (
+            <p className="text-center text-gray-500 py-4 border rounded-lg">
+              Digite para buscar produtos
+            </p>
+          )}
+
+          {/* Controles de quantidade */}
+          {produtoSelecionado && (
+            <div className="mt-4 p-4 bg-purple-50 rounded-lg">
+              <div className="flex items-center justify-between mb-2">
+                <div>
+                  <p className="font-semibold">{produtoSelecionado.nome}</p>
+                  <p className="text-sm text-gray-600">
+                    R$ {formatPrice(produtoSelecionado.preco_venda)} por unidade
+                  </p>
+                </div>
+                <Badge>Estoque: {produtoSelecionado.estoque_atual}</Badge>
+              </div>
+              
+              <div className="flex items-center gap-4">
+                <div className="flex-1">
+                  <Label>Quantidade</Label>
+                  <Input
+                    type="number"
+                    min="1"
+                    max={produtoSelecionado.estoque_atual}
+                    value={quantidade}
+                    onChange={(e) => setQuantidade(parseInt(e.target.value) || 1)}
+                    className="mt-1"
+                  />
+                </div>
+                <Button
+                  type="button"
+                  onClick={adicionarItem}
+                  className="mt-6 bg-gradient-to-r from-purple-600 to-violet-600"
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  Adicionar
+                </Button>
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* SEÇÃO: Itens da Venda */}
       {itens.length > 0 && (
-        <Card>
+        <Card className="border-2 border-purple-100">
           <CardContent className="pt-6">
-            <h3 className="font-semibold mb-4">Itens da Venda</h3>
+            <div className="flex items-center gap-2 mb-4">
+              <ShoppingCart className="h-5 w-5 text-purple-600" />
+              <h2 className="text-lg font-semibold">Itens da Venda</h2>
+              <Badge className="ml-auto">{itens.length} itens</Badge>
+            </div>
+
             <div className="space-y-2">
               {itens.map((item, index) => (
-                <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                <div
+                  key={index}
+                  className="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
+                >
                   <div className="flex-1">
-                    <p className="font-medium">{item.produto_nome}</p>
-                    <p className="text-sm text-gray-500">
-                      {item.quantidade} x R$ {formatPrice(item.preco_unitario)} = R$ {formatPrice(item.subtotal)}
+                    <div className="flex items-center gap-2">
+                      <p className="font-medium">{item.produto_nome}</p>
+                      {item.produto_marca && (
+                        <Badge variant="outline" className="text-xs">
+                          {item.produto_marca}
+                        </Badge>
+                      )}
+                    </div>
+                    <p className="text-sm text-gray-600">
+                      {item.quantidade} x R$ {formatPrice(item.preco_unitario)} ={' '}
+                      <span className="font-semibold text-emerald-600">
+                        R$ {formatPrice(item.subtotal)}
+                      </span>
                     </p>
                   </div>
                   <Button
@@ -283,7 +387,7 @@ const NovaVendaForm = ({ onSuccess, onCancel }) => {
                     variant="ghost"
                     size="icon"
                     onClick={() => removerItem(index)}
-                    className="text-red-500 hover:text-red-700"
+                    className="text-red-500 hover:text-red-700 hover:bg-red-50"
                   >
                     <Trash2 className="h-4 w-4" />
                   </Button>
@@ -291,32 +395,44 @@ const NovaVendaForm = ({ onSuccess, onCancel }) => {
               ))}
             </div>
 
-            <div className="mt-4 pt-4 border-t">
-              <div className="flex justify-between font-bold">
-                <span>Total:</span>
-                <span className="text-emerald-600">
-                  R$ {formatPrice(itens.reduce((acc, item) => acc + (item.subtotal || 0), 0))}
-                </span>
-              </div>
+            <Separator className="my-4" />
+
+            <div className="flex justify-between items-center text-lg font-bold">
+              <span>Total:</span>
+              <span className="text-emerald-600">
+                R$ {formatPrice(calcularTotal())}
+              </span>
             </div>
           </CardContent>
         </Card>
       )}
 
-      {/* Botões */}
-      <div className="flex gap-3">
-        <Button type="button" variant="outline" onClick={onCancel} className="flex-1">
+      {/* Botões de ação */}
+      <div className="flex gap-3 pt-4">
+        <Button
+          type="button"
+          variant="outline"
+          onClick={onCancel}
+          className="flex-1 h-12"
+        >
           Cancelar
         </Button>
         <Button
           type="submit"
-          className="flex-1 bg-gradient-to-r from-purple-600 to-violet-600"
+          className="flex-1 h-12 bg-gradient-to-r from-purple-600 to-violet-600 hover:from-purple-700 hover:to-violet-700"
           disabled={itens.length === 0 || criarVendaMutation.isPending}
         >
-          {criarVendaMutation.isPending && (
-            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+          {criarVendaMutation.isPending ? (
+            <>
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              Processando...
+            </>
+          ) : (
+            <>
+              <ShoppingCart className="h-4 w-4 mr-2" />
+              Finalizar Venda
+            </>
           )}
-          Finalizar Venda
         </Button>
       </div>
     </form>
