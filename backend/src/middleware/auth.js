@@ -1,4 +1,3 @@
-// backend/src/middleware/auth.js
 import jwt from 'jsonwebtoken';
 
 export const authenticate = async (req, res, next) => {
@@ -11,11 +10,17 @@ export const authenticate = async (req, res, next) => {
     const token = authHeader.replace('Bearer ', '');
     console.log('🔑 Token recebido:', token.substring(0, 20) + '...');
 
-    // Verifica o token
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     console.log('✅ Token válido para usuário:', decoded.userId);
+    console.log('👤 Dados do token:', decoded);
 
-    req.user = { id: decoded.userId };
+    // Adicionar isAdmin ao req.user
+    req.user = { 
+      id: decoded.userId, 
+      email: decoded.email,
+      isAdmin: decoded.isAdmin || false 
+    };
+    
     next();
   } catch (error) {
     console.error('❌ Erro na autenticação:', error.message);
