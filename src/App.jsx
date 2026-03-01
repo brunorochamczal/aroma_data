@@ -17,20 +17,6 @@ import Login from './pages/Login';
 const { Pages, Layout, mainPage } = pagesConfig;
 
 
-// Isso cria as rotas para cada página
-{Object.entries(Pages).map(([path, Page]) => (
-  <Route
-    key={path}
-    path={`/${path}`}
-    element={
-      <PrivateRoute>
-        <LayoutWrapper currentPageName={path}>
-          <Page />
-        </LayoutWrapper>
-      </PrivateRoute>
-    }
-  />
-))}
 
 
 const mainPageKey = mainPage ?? Object.keys(Pages)[0];
@@ -123,5 +109,17 @@ function App() {
     </AuthProvider>
   );
 }
+
+
+// PARA DEBUG - REMOVER DEPOIS
+if (typeof window !== 'undefined') {
+  window.__DEBUG__ = {
+    pages: pagesConfig.Pages,
+    routes: Object.keys(pagesConfig.Pages),
+    mainPage: pagesConfig.mainPage
+  };
+  console.log('🔍 Páginas disponíveis:', Object.keys(pagesConfig.Pages));
+}
+
 
 export default App;
