@@ -9,6 +9,7 @@ import Produtos from './pages/Produtos';        // DEVE ESTAR AQUI
 import Relatorios from './pages/Relatorios';    // DEVE ESTAR AQUI
 import Vendas from './pages/Vendas';            // DEVE ESTAR AQUI
 import __Layout from './Layout.jsx';
+import Teste from './pages/Teste';
 
 // LOG DETALHADO
 console.log('📦 Importação de páginas:');
@@ -33,6 +34,18 @@ export const pagesConfig = {
     Pages: PAGES,
     Layout: __Layout,
 };
+
+
+export const PAGES = {
+    "Teste": Teste,  // <-- ADICIONE ISSO
+    "Clientes": Clientes,
+    "Dashboard": Dashboard,
+    "Fornecedores": Fornecedores,
+    "Produtos": Produtos,
+    "Relatorios": Relatorios,
+    "Vendas": Vendas,
+}
+
 
 // EXPOR PARA DEBUG
 if (typeof window !== 'undefined') {
