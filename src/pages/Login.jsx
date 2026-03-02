@@ -53,18 +53,31 @@ export default function Login() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#fdf5f0] via-[#f9ede8]/50 to-[#fdf5f0] p-4">
       <Card className="w-full max-w-md bg-white/80 backdrop-blur-xl border-[#e8c9bc]">
+
+        
         <CardHeader className="text-center">
-          <div className="flex justify-center mb-4">
-            <img 
-              src={aromaLogo} 
-              alt="Aroma Data" 
-              className="h-16 w-16 object-contain"
-            />
-          </div>
-          <CardTitle className="text-2xl text-[#4a3728]">
-            {isLogin ? 'Bem-vindo de volta!' : 'Crie sua conta'}
-          </CardTitle>
+            {/* LOGO MAIOR E COM ESPAÇAMENTO */}
+            <div className="flex justify-center mb-6">
+              <img 
+                src={aromaLogo} 
+                alt="Aroma Data" 
+                className="h-32 w-auto object-contain" // AUMENTADO DE 16 para 32
+              />
+            </div>
+            
+            {/* TÍTULO E SUBTÍTULO */}
+            <CardTitle className="text-3xl font-bold text-[#4a3728] mb-2">
+              Aroma Data
+            </CardTitle>
+            <p className="text-sm text-[#C4967A] font-medium">
+              GESTÃO PARA VENDEDORES AUTÔNOMOS
+            </p>
         </CardHeader>
+
+
+
+
+        
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
             {!isLogin && (
