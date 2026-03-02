@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
 import { Loader2 } from 'lucide-react';
+import aromaLogo from '@/assets/imgnew/aromagif.gif';
 
 export default function Login() {
   const [isLogin, setIsLogin] = useState(true);
@@ -55,7 +56,7 @@ export default function Login() {
         <CardHeader className="text-center">
           <div className="flex justify-center mb-4">
             <img 
-              src="/imgnew/aromagif.gif" 
+              src={aromaLogo} 
               alt="Aroma Data" 
               className="h-16 w-16 object-contain"
             />
