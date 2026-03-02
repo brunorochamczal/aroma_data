@@ -55,7 +55,7 @@ export default function Login() {
         <CardHeader className="text-center">
           <div className="flex justify-center mb-4">
             <img 
-              src="./src/imgnew/aromagif.gif" 
+              src="/imgnew/aromagif.gif" 
               alt="Aroma Data" 
               className="h-16 w-16 object-contain"
             />
