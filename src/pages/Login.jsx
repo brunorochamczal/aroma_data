@@ -61,7 +61,7 @@ export default function Login() {
               <img 
                 src={aromaLogo} 
                 alt="Aroma Data" 
-                className="h-48 w-auto object-contain" // AUMENTADO DE 16 para 32
+                className="h-52 w-auto object-contain" // AUMENTADO DE 16 para 32
               />
             </div>
             
