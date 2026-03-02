@@ -1,7 +1,7 @@
 # Aroma Data - Gestão para vendedores autônomos de perfumaria
 
 <p align="center">
-  <img src="./aroma.png" alt="Dashboard" width="300"/>
+  <img src="./src/imgsnew/aromagif.gif" alt="Dashboard" width="300"/>
 </p>
 
 ## 🚀 **Organiza toda a gestão das vendas do vendedor autônomo**
