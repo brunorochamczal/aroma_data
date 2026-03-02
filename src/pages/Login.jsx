@@ -65,13 +65,8 @@ export default function Login() {
               />
             </div>
             
-            {/* TÍTULO E SUBTÍTULO */}
-            <CardTitle className="text-3xl font-bold text-[#4a3728] mb-2">
-              Aroma Data
-            </CardTitle>
-            <p className="text-sm text-[#C4967A] font-medium">
-              GESTÃO PARA VENDEDORES AUTÔNOMOS
-            </p>
+           
+            
         </CardHeader>
 
 
