@@ -96,9 +96,7 @@ O **Aroma Data** é um sistema de gestão desenvolvido especialmente para vended
 
 ---
 
-## 🌐 **Acesse o Sistema**
-
-🔗 [https://aroma-data.onrender.com](https://aroma-data.onrender.com) 
+ 
 
 ### **Para testar**
 
